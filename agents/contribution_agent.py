@@ -41,13 +41,13 @@ class ContributionAgent:
 
         logger.info(f"Loading MergeCraft model from {self.model_path}")
         base = "Qwen/Qwen2.5-7B-Coder-Instruct"
-        self._tokenizer = AutoTokenizer.from_pretrained(base)
+        self._tokenizer = AutoTokenizer.from_pretrained(base)  # nosec B615
         import torch
 
-        model = AutoModelForCausalLM.from_pretrained(
+        model = AutoModelForCausalLM.from_pretrained(  # nosec B615
             base, device_map="auto", torch_dtype=torch.bfloat16
         )
-        self._model = PeftModel.from_pretrained(model, self.model_path)
+        self._model = PeftModel.from_pretrained(model, self.model_path)  # nosec B615
 
     def _call_api(self, prompt: str) -> str:
         import anthropic

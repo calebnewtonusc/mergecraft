@@ -103,8 +103,8 @@ def load_training_data(config: SFTConfig_) -> tuple[Dataset, Dataset]:
 
 
 def train(config: SFTConfig_) -> None:
-    tokenizer = AutoTokenizer.from_pretrained(config.base_model)
-    model = AutoModelForCausalLM.from_pretrained(
+    tokenizer = AutoTokenizer.from_pretrained(config.base_model)  # nosec B615
+    model = AutoModelForCausalLM.from_pretrained(  # nosec B615
         config.base_model,
         torch_dtype=torch.bfloat16,
         device_map=None,

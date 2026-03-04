@@ -1,3 +1,4 @@
+---
 # MergeCraft DPO Configuration
 model:
   base: checkpoints/grpo

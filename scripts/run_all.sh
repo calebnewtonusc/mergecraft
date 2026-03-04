@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -e
-[ -f .env ] && export $(grep -v '^#' .env | xargs)
+[ -f .env ] && set -a && source .env && set +a
 bash scripts/check_env.sh
 echo "[1/4] Discovery..."
 python3 discovery/github_pr_outcome_crawler.py --top-repos 1000 --workers 10

@@ -172,7 +172,7 @@ def collect_repo_first_contributions(
                 continue
 
             issue_number = issue.get("number", 0)
-            issue_labels = [l.get("name", "") for l in issue.get("labels", [])]
+            issue_labels = [line.get("name", "") for line in issue.get("labels", [])]
 
             # Find linked PR
             pr_data = _get_linked_pr(repo, issue_number)

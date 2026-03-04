@@ -131,8 +131,8 @@ class PRDescriptionAgent:
         if not code_changes:
             return "Implementation details not available"
         lines = code_changes.splitlines()
-        added = [l for l in lines if l.startswith("+") and not l.startswith("+++")]
-        removed = [l for l in lines if l.startswith("-") and not l.startswith("---")]
+        added = [line for line in lines if line.startswith("+") and not line.startswith("+++")]
+        removed = [line for line in lines if line.startswith("-") and not line.startswith("---")]
         return f"{len(added)} lines added, {len(removed)} lines removed"
 
     def _generate(self, prompt: str) -> str:

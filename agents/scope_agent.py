@@ -45,9 +45,9 @@ class ScopeAgent:
         """Count lines added in the code changes."""
         changes = code_changes.get("code_changes", "")
         added = [
-            l
-            for l in changes.splitlines()
-            if l.startswith("+") and not l.startswith("+++")
+            line
+            for line in changes.splitlines()
+            if line.startswith("+") and not line.startswith("+++")
         ]
         return len(added)
 

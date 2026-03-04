@@ -30,9 +30,9 @@ RESULTS_DIR = Path("results")
 def _estimate_metadata(code_diff: str) -> dict:
     """MC-3: Estimate PR metadata from the actual code diff instead of using hardcoded values."""
     lines = code_diff.splitlines()
-    lines_added = sum(1 for l in lines if l.startswith("+") and not l.startswith("+++"))
+    lines_added = sum(1 for line in lines if line.startswith("+") and not line.startswith("+++"))
     lines_deleted = sum(
-        1 for l in lines if l.startswith("-") and not l.startswith("---")
+        1 for line in lines if line.startswith("-") and not line.startswith("---")
     )
     files_changed = max(1, code_diff.count("diff --git"))
     has_tests = any(

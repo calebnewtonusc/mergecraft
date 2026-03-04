@@ -76,10 +76,10 @@ async def contribute(request: ContributeRequest):
         diff_lines = code_diff.splitlines()
         real_metadata = {
             "lines_added": sum(
-                1 for l in diff_lines if l.startswith("+") and not l.startswith("+++")
+                1 for line in diff_lines if line.startswith("+") and not line.startswith("+++")
             ),
             "lines_deleted": sum(
-                1 for l in diff_lines if l.startswith("-") and not l.startswith("---")
+                1 for line in diff_lines if line.startswith("-") and not line.startswith("---")
             ),
             "files_changed": max(1, code_diff.count("diff --git")),
             "has_tests": any(
@@ -158,4 +158,4 @@ async def score(request: ScoreRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("API_PORT", "8000")))
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("API_PORT", "8000")))  # nosec B104

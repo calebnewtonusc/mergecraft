@@ -29,8 +29,8 @@ import random
 # MC-9: module-level counter for collision-free sequential synthetic IDs
 _synth_id_counter = itertools.count()
 
-import aiohttp
-from loguru import logger
+import aiohttp  # noqa: E402
+from loguru import logger  # noqa: E402
 
 try:
     import anthropic

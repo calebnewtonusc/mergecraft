@@ -1,3 +1,4 @@
+---
 # MergeCraft SFT Configuration
 model:
   name: Qwen/Qwen2.5-7B-Coder-Instruct

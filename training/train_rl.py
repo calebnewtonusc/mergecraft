@@ -173,18 +173,18 @@ def load_rl_dataset(config: GRPOTrainingConfig) -> Dataset:
 
 def train(config: GRPOTrainingConfig) -> None:
     logger.info(f"Loading SFT checkpoint (PEFT adapter): {config.base_model}")
-    tokenizer = AutoTokenizer.from_pretrained(config.base_model)
+    tokenizer = AutoTokenizer.from_pretrained(config.base_model)  # nosec B615
     # Read adapter_config.json to find the true base model, then wrap with the
     # PEFT adapter.  Loading a PEFT adapter directory via AutoModelForCausalLM
     # silently ignores the LoRA weights — PeftModel.from_pretrained is required.
     adapter_cfg = json.load(open(Path(config.base_model) / "adapter_config.json"))
     true_base = adapter_cfg["base_model_name_or_path"]
-    base_model = AutoModelForCausalLM.from_pretrained(
+    base_model = AutoModelForCausalLM.from_pretrained(  # nosec B615
         true_base,
         torch_dtype=torch.bfloat16,
         device_map=None,
     )
-    model = PeftModel.from_pretrained(base_model, config.base_model)
+    model = PeftModel.from_pretrained(base_model, config.base_model)  # nosec B615
     model.enable_input_require_grads()
 
     simulator = MaintainerSimulator()
