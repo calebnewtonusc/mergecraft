@@ -28,7 +28,7 @@ training:
   max_seq_length: 8192
   dataset_text_field: text
   logging_steps: 25
-  report_to: none
+  report_to: []
   run_name: mergecraft-sft
 
 deepspeed: training/configs/deepspeed_zero3.json

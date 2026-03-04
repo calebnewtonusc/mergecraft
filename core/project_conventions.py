@@ -220,21 +220,26 @@ class ConventionExtractor:
         logger.info(f"Extracting conventions for {repo}")
         conventions = ProjectConventions(repo=repo)
 
-        # Parse CONTRIBUTING.md
+        # Parse CONTRIBUTING.md — track which keys were explicitly set so that
+        # commit-history analysis does not silently override them.  No field is
+        # ever None by default, so the old `getattr(...) is None` guard never
+        # actually blocked any override.
+        contributing_keys: set[str] = set()
         contributing = self._get_file(repo, "CONTRIBUTING.md")
         if contributing:
             overrides = self._extract_from_contributing_md(contributing)
             for key, val in overrides.items():
                 setattr(conventions, key, val)
+                contributing_keys.add(key)
             logger.debug(f"  CONTRIBUTING.md: {len(overrides)} conventions extracted")
         else:
             logger.debug(f"  No CONTRIBUTING.md found for {repo}")
 
-        # Analyze commits
+        # Analyze commits — only apply values for keys not already set by
+        # CONTRIBUTING.md so that explicit rules are never overridden.
         commit_conventions = self._extract_from_commits(repo)
         for key, val in commit_conventions.items():
-            # MC-19: `not getattr(...)` treats False and 0 as missing; use `is None` instead
-            if getattr(conventions, key, None) is None:  # Don't override CONTRIBUTING.md
+            if key not in contributing_keys:
                 setattr(conventions, key, val)
 
         # Check for formatter configs

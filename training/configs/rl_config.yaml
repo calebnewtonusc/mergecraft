@@ -17,11 +17,10 @@ reward:
 
 training:
   output_dir: checkpoints/grpo
-  group_size: 8
   learning_rate: 5.0e-6
   bf16: true
   gradient_checkpointing: true
-  report_to: none
+  report_to: []
   run_name: mergecraft-grpo
 
 deepspeed: training/configs/deepspeed_zero3.json

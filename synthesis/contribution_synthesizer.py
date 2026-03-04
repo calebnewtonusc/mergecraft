@@ -25,8 +25,9 @@ from synthesis.prompts import CONTRIBUTION_SYSTEM, CONTRIBUTION_USER
 
 RAW_DIR = Path("data/raw/prs")
 SYNTHESIZED_DIR = Path("data/synthesized")
-SYNTHESIZED_DIR.mkdir(parents=True, exist_ok=True)
 # MC-31: removed unused ANTHROPIC_API_KEY constant (was imported but never referenced)
+# NOTE: SYNTHESIZED_DIR.mkdir() is called lazily inside synthesize_all() to avoid
+# side-effects at import time.
 
 
 def pr_to_task_description(pr: dict) -> str:
@@ -98,6 +99,7 @@ def synthesize_from_pr_file(jsonl_path: Path, output_dir: Path) -> int:
 
 def synthesize_all(input_dir: Path, output_dir: Path, workers: int = 8) -> int:
     """Synthesize training pairs from all collected PR outcome files."""
+    output_dir.mkdir(parents=True, exist_ok=True)
     pr_files = list(input_dir.glob("*.jsonl"))
     logger.info(f"Processing {len(pr_files)} PR outcome files...")
 

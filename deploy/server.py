@@ -32,6 +32,7 @@ class ScoreRequest(BaseModel):
     pr_description: str
     code_diff: str
     metadata: dict = {}
+    conventions: dict = {}  # Optional project conventions; if omitted, ConventionExtractor is used.
 
 
 @app.get("/health")
@@ -82,8 +83,8 @@ async def contribute(request: ContributeRequest):
             ),
             "files_changed": max(1, code_diff.count("diff --git")),
             "has_tests": any(
-                kw in code_diff.lower()
-                for kw in ["def test_", "class test", "pytest", "unittest", "assert ", "test_"]
+                kw in code_diff
+                for kw in ["def test_", "class Test", "import pytest", "import unittest"]
             ),
             "links_issue": any(
                 kw in code_diff.lower() for kw in ["closes #", "fixes #", "resolves #"]
@@ -116,16 +117,27 @@ async def contribute(request: ContributeRequest):
 @app.post("/score")
 async def score(request: ScoreRequest):
     from synthesis.maintainer_simulator import MaintainerSimulator
+    from core.project_conventions import ConventionExtractor
     sim = MaintainerSimulator()
-    # MC-29: TODO: load real project conventions from the conventions store (core/project_conventions.py)
-    # for request.repo and pass them here. Currently no conventions are passed, so rule-based
-    # checks (max_pr_size, test_required, dco_required) always use their defaults.
+    # Use caller-supplied conventions when provided; otherwise extract them live
+    # from the repository so rule-based checks (max_pr_size, test_required,
+    # dco_required) use real project values instead of hardcoded defaults.
+    if request.conventions:
+        conventions = request.conventions
+    else:
+        try:
+            extractor = ConventionExtractor(github_token=os.getenv("GITHUB_TOKEN"))
+            conventions = extractor.extract(request.repo).to_dict()
+        except Exception as e:
+            logger.warning(f"Convention extraction failed for {request.repo}: {e}; using defaults")
+            conventions = {}
     result = sim.score(
         repo=request.repo,
         pr_title=request.pr_title,
         pr_description=request.pr_description,
         code_diff=request.code_diff,
         metadata=request.metadata,
+        conventions=conventions,
     )
     return {
         "merge_probability": result.merge_probability,

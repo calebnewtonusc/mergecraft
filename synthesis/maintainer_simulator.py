@@ -175,7 +175,7 @@ class MaintainerSimulator:
                 data, _ = json.JSONDecoder().raw_decode(raw, brace_pos)
             except (ValueError, json.JSONDecodeError):
                 data = None
-            if data:
+            if data is not None:
                 return SimulatorScore(
                     merge_probability=float(data.get("merge_probability", 0.5)),
                     primary_rejection_risk=data.get("primary_rejection_risk", "UNKNOWN"),

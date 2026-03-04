@@ -87,18 +87,23 @@ def load_preference_data(config: DPOConfig_) -> Dataset:
 
 def train(config: DPOConfig_) -> None:
     tokenizer = AutoTokenizer.from_pretrained(config.base_model)
-    # Load the base model then wrap with the PEFT adapter.  Loading a PEFT adapter
-    # directory via AutoModelForCausalLM silently ignores the LoRA weights.
+    # Read adapter_config.json to find the true base model, then wrap with the
+    # PEFT adapter.  Loading a PEFT adapter directory via AutoModelForCausalLM
+    # silently ignores the LoRA weights — PeftModel.from_pretrained is required.
+    adapter_cfg = json.load(open(Path(config.base_model) / "adapter_config.json"))
+    true_base = adapter_cfg["base_model_name_or_path"]
     _base = AutoModelForCausalLM.from_pretrained(
-        config.base_model, torch_dtype=torch.bfloat16, device_map=None,
+        true_base, torch_dtype=torch.bfloat16, device_map=None,
     )
     model = PeftModel.from_pretrained(_base, config.base_model)
+    model.enable_input_require_grads()
     # ref_model must be a separate frozen copy — load the base independently so
     # the two models share no state.
     _ref_base = AutoModelForCausalLM.from_pretrained(
-        config.base_model, torch_dtype=torch.bfloat16, device_map=None,
+        true_base, torch_dtype=torch.bfloat16, device_map=None,
     )
     ref_model = PeftModel.from_pretrained(_ref_base, config.base_model)
+    ref_model.enable_input_require_grads()
     # MC-6: ref_model must be in eval mode — it is frozen and only used for KL divergence
     ref_model.eval()
 
@@ -109,7 +114,7 @@ def train(config: DPOConfig_) -> None:
         beta=config.beta,
         learning_rate=config.learning_rate,
         bf16=True,
-        report_to="wandb" if os.getenv("WANDB_API_KEY") else "none",
+        report_to="wandb" if os.getenv("WANDB_API_KEY") else [],
     )
     trainer = DPOTrainer(
         model=model, ref_model=ref_model, processing_class=tokenizer,

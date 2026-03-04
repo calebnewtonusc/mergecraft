@@ -109,6 +109,7 @@ def train(config: SFTConfig_) -> None:
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
     )
     model = get_peft_model(model, lora)
+    model.enable_input_require_grads()
     model.print_trainable_parameters()
 
     train_ds, val_ds = load_training_data(config)
@@ -124,7 +125,7 @@ def train(config: SFTConfig_) -> None:
         dataset_text_field="text",
         eval_strategy="steps",
         eval_steps=500,
-        report_to="wandb" if os.getenv("WANDB_API_KEY") else "none",
+        report_to="wandb" if os.getenv("WANDB_API_KEY") else [],
     )
     trainer = SFTTrainer(
         model=model, processing_class=tokenizer,

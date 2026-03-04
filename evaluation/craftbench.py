@@ -25,7 +25,7 @@ from loguru import logger
 
 BENCH_DIR = Path("evaluation/craftbench_data")
 RESULTS_DIR = Path("results")
-RESULTS_DIR.mkdir(exist_ok=True)
+# NOTE: RESULTS_DIR.mkdir() is called lazily inside run() to avoid side-effects at import time.
 
 
 def _estimate_metadata(code_diff: str) -> dict:
@@ -35,8 +35,8 @@ def _estimate_metadata(code_diff: str) -> dict:
     lines_deleted = sum(1 for l in lines if l.startswith("-") and not l.startswith("---"))
     files_changed = max(1, code_diff.count("diff --git"))
     has_tests = any(
-        kw in code_diff.lower()
-        for kw in ["def test_", "class test", "pytest", "unittest", "assert ", "test_"]
+        kw in code_diff
+        for kw in ["def test_", "class Test", "import pytest", "import unittest"]
     )
     links_issue = any(kw in code_diff.lower() for kw in ["closes #", "fixes #", "resolves #"])
     return {
@@ -292,6 +292,7 @@ class CraftBench:
         output_path: Path | None = None,
     ) -> CraftBenchSummary:
         """Run CraftBench evaluation."""
+        RESULTS_DIR.mkdir(exist_ok=True)
         scenarios = self.scenarios
         if category:
             scenarios = [s for s in scenarios if s.category == category]

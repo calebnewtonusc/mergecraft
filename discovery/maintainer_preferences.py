@@ -312,6 +312,20 @@ def main() -> None:
 
     logger.info(f"Analyzing maintainer preferences for {len(repos)} repos")
 
+    # Load repos already written to the output file to avoid duplicates.
+    already_written: set[str] = set()
+    if prefs_path.exists():
+        with open(prefs_path) as existing_f:
+            for line in existing_f:
+                line = line.strip()
+                if line:
+                    try:
+                        entry = json.loads(line)
+                        if entry.get("repo"):
+                            already_written.add(entry["repo"])
+                    except json.JSONDecodeError:
+                        pass
+
     total = 0
     with open(prefs_path, "a") as out_f:
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
@@ -321,7 +335,11 @@ def main() -> None:
                 try:
                     prefs = future.result()
                     if prefs:
+                        if prefs.repo in already_written:
+                            logger.debug(f"  {repo}: already in output, skipping")
+                            continue
                         out_f.write(json.dumps(asdict(prefs)) + "\n")
+                        already_written.add(prefs.repo)
                         total += 1
                         logger.info(
                             f"  {repo}: {len(prefs.top_maintainers)} maintainers analyzed"

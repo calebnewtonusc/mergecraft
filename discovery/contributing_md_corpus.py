@@ -72,13 +72,14 @@ def extract_conventions(contributing_md: str, repo: str) -> dict:
 
     Returns a dict of detected conventions.
     """
-    text = contributing_md.lower()
+    # Run regex on the original text (not a pre-lowercased copy) with re.IGNORECASE so
+    # that captured groups preserve their original casing (e.g. tool names, version refs).
     conventions: dict = {"repo": repo, "detected": {}}
 
     for category, patterns in CONVENTION_PATTERNS.items():
         conventions["detected"][category] = {}
         for name, pattern in patterns.items():
-            m = re.search(pattern, text, re.IGNORECASE)
+            m = re.search(pattern, contributing_md, re.IGNORECASE)
             if m:
                 conventions["detected"][category][name] = True
                 if m.lastindex:

@@ -8,6 +8,12 @@ python3 discovery/contributing_md_corpus.py --min-stars 50
 python3 discovery/maintainer_interviews.py
 echo "[2/4] Synthesis..."
 python3 synthesis/contribution_synthesizer.py --input-dir data/raw/prs --output-dir data/synthesized
+# Preflight check: synthesize_bulk.py requires either a vLLM endpoint or the
+# Anthropic API key.  Fail fast here rather than after a long discovery run.
+if [ -z "${VLLM_URLS}" ] && [ -z "${ANTHROPIC_API_KEY}" ]; then
+    echo "ERROR: synthesize_bulk.py requires either VLLM_URLS or ANTHROPIC_API_KEY to be set." >&2
+    exit 1
+fi
 python3 synthesis/synthesize_bulk.py --count 50000
 echo "[3/4] Training..."
 deepspeed --num_gpus=18 training/train.py --deepspeed training/configs/ds_config.json --output_dir checkpoints/sft

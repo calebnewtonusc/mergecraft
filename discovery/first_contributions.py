@@ -242,6 +242,20 @@ def main() -> None:
 
     logger.info(f"Collecting first-contribution triples from {len(repos)} repos")
 
+    # Load IDs already written to the output file to avoid duplicates.
+    already_written_ids: set[str] = set()
+    if out_file.exists():
+        with open(out_file) as existing_f:
+            for line in existing_f:
+                line = line.strip()
+                if line:
+                    try:
+                        entry = json.loads(line)
+                        if entry.get("id"):
+                            already_written_ids.add(entry["id"])
+                    except json.JSONDecodeError:
+                        pass
+
     total = 0
     with open(out_file, "a") as out_f:
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
@@ -250,11 +264,16 @@ def main() -> None:
                 repo = futures[future]
                 try:
                     triples = future.result()
+                    new_triples = []
                     for t in triples:
+                        if t.id in already_written_ids:
+                            continue
                         out_f.write(json.dumps(asdict(t)) + "\n")
-                    total += len(triples)
-                    if triples:
-                        logger.info(f"  {repo}: {len(triples)} triples")
+                        already_written_ids.add(t.id)
+                        new_triples.append(t)
+                    total += len(new_triples)
+                    if new_triples:
+                        logger.info(f"  {repo}: {len(new_triples)} triples")
                 except Exception as e:
                     logger.debug(f"  {repo} failed: {e}")
 

@@ -45,16 +45,15 @@ class GRPOTrainingConfig:
 def build_reward_fn(simulator: MaintainerSimulator):
     """Build the GRPO reward function using the maintainer simulator."""
 
-    def reward_fn(prompts: list[str], completions: list[list[str]], **kwargs) -> list[float]:
-        # GRPOTrainer passes completions as a nested list: one list of completion
-        # strings per prompt (num_generations completions each). We flatten them
-        # into a single list of rewards, one per completion, so the returned list
-        # has length num_prompts * num_generations.
+    def reward_fn(prompts: list[str], completions: list[str], **kwargs) -> list[float]:
+        # GRPOTrainer passes completions as a flat list of strings (not nested).
+        # There are num_generations completions per prompt, interleaved in order.
         rewards = []
-        for prompt, completion_group in zip(prompts, completions):
+        n = len(completions) // len(prompts)  # num_generations
+        for i, prompt in enumerate(prompts):
             repo = _extract_repo(prompt)
             conventions = _extract_conventions(prompt)
-            for completion in completion_group:
+            for completion in completions[i * n:(i + 1) * n]:
                 score = simulator.score(
                     repo=repo,
                     pr_title="",
@@ -113,7 +112,12 @@ def _estimate_metadata(completion: str) -> dict:
         elif in_hunk and not line.startswith("+") and not line.startswith("-") and not line.startswith(" ") and not line.startswith("\\"):
             # Non-diff context line signals end of hunk
             in_hunk = False
-    has_tests = "def test_" in completion or "assert " in completion
+    has_tests = (
+        "def test_" in completion
+        or "class Test" in completion
+        or "import pytest" in completion
+        or "import unittest" in completion
+    )
     links_issue = "#" in completion and "issue" in completion.lower()
     return {
         "lines_added": added,
@@ -158,13 +162,16 @@ def load_rl_dataset(config: GRPOTrainingConfig) -> Dataset:
 def train(config: GRPOTrainingConfig) -> None:
     logger.info(f"Loading SFT checkpoint (PEFT adapter): {config.base_model}")
     tokenizer = AutoTokenizer.from_pretrained(config.base_model)
-    # Load the base model from the adapter config, then apply the PEFT adapter on
-    # top.  Using AutoModelForCausalLM.from_pretrained on a PEFT adapter directory
+    # Read adapter_config.json to find the true base model, then wrap with the
+    # PEFT adapter.  Loading a PEFT adapter directory via AutoModelForCausalLM
     # silently ignores the LoRA weights — PeftModel.from_pretrained is required.
+    adapter_cfg = json.load(open(Path(config.base_model) / "adapter_config.json"))
+    true_base = adapter_cfg["base_model_name_or_path"]
     base_model = AutoModelForCausalLM.from_pretrained(
-        config.base_model, torch_dtype=torch.bfloat16, device_map=None,
+        true_base, torch_dtype=torch.bfloat16, device_map=None,
     )
     model = PeftModel.from_pretrained(base_model, config.base_model)
+    model.enable_input_require_grads()
 
     simulator = MaintainerSimulator()
     reward_fn = build_reward_fn(simulator)
@@ -177,7 +184,7 @@ def train(config: GRPOTrainingConfig) -> None:
         max_completion_length=config.max_new_tokens,
         beta=config.kl_coeff,
         bf16=True,
-        report_to="wandb" if os.getenv("WANDB_API_KEY") else "none",
+        report_to="wandb" if os.getenv("WANDB_API_KEY") else [],
     )
     trainer = GRPOTrainer(
         model=model, processing_class=tokenizer,
