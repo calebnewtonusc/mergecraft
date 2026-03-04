@@ -33,9 +33,9 @@ class MaintainerProfile:
 
     # Known preferences (inferred from review comments)
     requires_test_before_impl: bool = False  # "write test first"
-    prefers_small_commits: bool = False       # "please squash"
-    detailed_descriptions: bool = False       # "more context needed"
-    strict_naming: bool = False               # "variable names should be..."
+    prefers_small_commits: bool = False  # "please squash"
+    detailed_descriptions: bool = False  # "more context needed"
+    strict_naming: bool = False  # "variable names should be..."
 
     # Common blocking phrases this maintainer uses
     blocking_phrases: list[str] = field(default_factory=list)
@@ -110,13 +110,13 @@ class MaintainerModel:
         if re.search(r"(please squash|single commit|squash.*commit)", comment_text):
             profile.prefers_small_commits = True
 
-        if re.search(r"(more context|please explain|what is the use case|why)", comment_text):
+        if re.search(
+            r"(more context|please explain|what is the use case|why)", comment_text
+        ):
             profile.detailed_descriptions = True
 
         # Collect blocking phrases (most common REQUEST_CHANGES phrases)
-        blocking_pattern = re.findall(
-            r"please\s+\w+(?:\s+\w+){0,5}", comment_text
-        )
+        blocking_pattern = re.findall(r"please\s+\w+(?:\s+\w+){0,5}", comment_text)
         profile.blocking_phrases = list(set(blocking_pattern))[:10]
 
         self.save_profile(profile)
@@ -135,16 +135,21 @@ class MaintainerModel:
         risks = []
         score = 0.8  # Base score
 
-        for username in (active_maintainers or []):
+        for username in active_maintainers or []:
             profile = self.load_profile(username) or MaintainerProfile(
                 username=username, repo=self.repo
             )
 
             if profile.requires_test_before_impl and not pr_metadata.get("has_tests"):
-                risks.append(f"{username}: requires tests (write-test-first maintainer)")
+                risks.append(
+                    f"{username}: requires tests (write-test-first maintainer)"
+                )
                 score -= 0.2
 
-            if profile.detailed_descriptions and len(pr_metadata.get("description", "")) < 100:
+            if (
+                profile.detailed_descriptions
+                and len(pr_metadata.get("description", "")) < 100
+            ):
                 risks.append(f"{username}: prefers detailed descriptions")
                 score -= 0.1
 
@@ -152,8 +157,10 @@ class MaintainerModel:
             "predicted_score": max(0.0, score),
             "maintainer_risks": risks,
             "recommendation": (
-                "Likely to merge" if score >= 0.7
-                else "Needs revision" if score >= 0.5
+                "Likely to merge"
+                if score >= 0.7
+                else "Needs revision"
+                if score >= 0.5
                 else "High rejection risk"
             ),
         }

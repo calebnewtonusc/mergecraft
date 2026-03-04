@@ -13,12 +13,9 @@ Usage:
     conventions = extractor.extract("django/django")
 """
 
-import json
 import os
 import re
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
 
 from loguru import logger
 
@@ -36,13 +33,13 @@ class ProjectConventions:
     squash_preferred: bool = False
 
     # PR scope
-    max_pr_size_soft: int = 500    # Lines added (advisory)
-    max_pr_size_hard: int = 2000   # Lines added (enforced via bot or policy)
+    max_pr_size_soft: int = 500  # Lines added (advisory)
+    max_pr_size_hard: int = 2000  # Lines added (enforced via bot or policy)
     single_issue_per_pr: bool = True
 
     # Test requirements
     test_required: bool = True
-    tests_first: bool = False      # TDD projects
+    tests_first: bool = False  # TDD projects
     min_test_coverage: float | None = None
 
     # Process
@@ -111,6 +108,7 @@ class ConventionExtractor:
                 resp = requests.get(url, headers=self._headers, timeout=15)
                 if resp.status_code == 200:
                     import base64
+
                     content = resp.json().get("content", "")
                     return base64.b64decode(content).decode("utf-8", errors="replace")
             except Exception:
@@ -133,23 +131,38 @@ class ConventionExtractor:
             result["commit_style"] = "imperative"
 
         # Tests
-        if re.search(r"(all pr.{0,20}include test|tests? (?:must|required|should))", text):
+        if re.search(
+            r"(all pr.{0,20}include test|tests? (?:must|required|should))", text
+        ):
             result["test_required"] = True
         if re.search(r"(test.?first|tdd)", text):
             result["tests_first"] = True
 
         # Issue first
-        if re.search(r"(open.{0,10}issue.{0,20}first|discuss.{0,20}before|issue before pr)", text):
+        if re.search(
+            r"(open.{0,10}issue.{0,20}first|discuss.{0,20}before|issue before pr)", text
+        ):
             result["issue_first"] = True
 
         # PR size
-        size_m = re.search(r"(?:max|maximum|no more than)\s*(\d+)\s*(?:lines?|loc)", text)
+        size_m = re.search(
+            r"(?:max|maximum|no more than)\s*(\d+)\s*(?:lines?|loc)", text
+        )
         if size_m:
             result["max_pr_size_soft"] = int(size_m.group(1))
 
         # Formatters
         formatters = []
-        for fmt in ["black", "ruff", "flake8", "isort", "prettier", "eslint", "gofmt", "rustfmt"]:
+        for fmt in [
+            "black",
+            "ruff",
+            "flake8",
+            "isort",
+            "prettier",
+            "eslint",
+            "gofmt",
+            "rustfmt",
+        ]:
             if fmt in text:
                 formatters.append(fmt)
         if formatters:
@@ -176,12 +189,18 @@ class ConventionExtractor:
             messages = [c["commit"]["message"].split("\n")[0] for c in commits]
 
             # Conventional commits
-            conv_count = sum(1 for m in messages if re.match(r"^(feat|fix|chore|docs|test|refactor):", m))
+            conv_count = sum(
+                1
+                for m in messages
+                if re.match(r"^(feat|fix|chore|docs|test|refactor):", m)
+            )
             if conv_count > len(messages) * 0.5:
                 result["commit_style"] = "conventional"
 
             # DCO
-            dco_count = sum(1 for c in commits if "Signed-off-by:" in c["commit"]["message"])
+            dco_count = sum(
+                1 for c in commits if "Signed-off-by:" in c["commit"]["message"]
+            )
             if dco_count > len(commits) * 0.7:
                 result["commit_requires_dco"] = True
 
@@ -195,15 +214,16 @@ class ConventionExtractor:
 
         return result
 
-    def _infer_unwritten_rules(
-        self, rejected_prs: list[dict]
-    ) -> list[str]:
+    def _infer_unwritten_rules(self, rejected_prs: list[dict]) -> list[str]:
         """Infer unwritten rules from patterns in rejected PRs."""
         rules = []
-        rejection_reasons = [p.get("rejection_reason") for p in rejected_prs if p.get("rejection_reason")]
+        rejection_reasons = [
+            p.get("rejection_reason") for p in rejected_prs if p.get("rejection_reason")
+        ]
 
         # Count rejection categories
         from collections import Counter
+
         reason_counts = Counter(rejection_reasons)
 
         # Identify patterns
@@ -211,7 +231,9 @@ class ConventionExtractor:
         for reason, count in reason_counts.most_common():
             rate = count / total_rejected if total_rejected > 0 else 0
             if rate > 0.3 and reason != "UNCLASSIFIED":
-                rules.append(f"{reason} is a common rejection ({rate:.0%} of closed PRs)")
+                rules.append(
+                    f"{reason} is a common rejection ({rate:.0%} of closed PRs)"
+                )
 
         return rules
 
@@ -244,12 +266,20 @@ class ConventionExtractor:
 
         # Check for formatter configs
         if not conventions.formatters:
-            for config_file in ["pyproject.toml", ".flake8", "setup.cfg", ".eslintrc", ".prettierrc"]:
+            for config_file in [
+                "pyproject.toml",
+                ".flake8",
+                "setup.cfg",
+                ".eslintrc",
+                ".prettierrc",
+            ]:
                 content = self._get_file(repo, config_file)
                 if content:
                     for fmt in ["black", "ruff", "prettier", "eslint"]:
                         if fmt in content and fmt not in conventions.formatters:
                             conventions.formatters.append(fmt)
 
-        logger.success(f"Convention profile for {repo}: {conventions.to_summary()[:100]}...")
+        logger.success(
+            f"Convention profile for {repo}: {conventions.to_summary()[:100]}..."
+        )
         return conventions

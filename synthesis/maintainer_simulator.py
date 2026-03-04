@@ -19,6 +19,7 @@ Usage:
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import json
@@ -102,7 +103,7 @@ class MaintainerSimulator:
         issues = []
 
         lines_added = metadata.get("lines_added", 0)
-        files_changed = metadata.get("files_changed", 0)
+        metadata.get("files_changed", 0)
         has_tests = metadata.get("has_tests", False)
         links_issue = metadata.get("links_issue", False)
         has_dco = metadata.get("has_dco", False)
@@ -111,7 +112,9 @@ class MaintainerSimulator:
         max_lines = conventions.get("max_pr_size", 500)
         if lines_added > max_lines * 2:
             score -= 0.4
-            issues.append(f"SCOPE_TOO_LARGE: {lines_added} lines > {max_lines * 2} soft limit")
+            issues.append(
+                f"SCOPE_TOO_LARGE: {lines_added} lines > {max_lines * 2} soft limit"
+            )
         elif lines_added > max_lines:
             score -= 0.2
 
@@ -178,7 +181,9 @@ class MaintainerSimulator:
             if data is not None:
                 return SimulatorScore(
                     merge_probability=float(data.get("merge_probability", 0.5)),
-                    primary_rejection_risk=data.get("primary_rejection_risk", "UNKNOWN"),
+                    primary_rejection_risk=data.get(
+                        "primary_rejection_risk", "UNKNOWN"
+                    ),
                     blocking_issues=data.get("blocking_issues", []),
                     suggestions=data.get("suggestions", []),
                 )
@@ -237,9 +242,13 @@ def main() -> None:
             print(f"  Blocking: {issue}")
 
     elif args.train:
-        logger.info("Maintainer simulator training: uses labeled PR outcome data from synthesis")
+        logger.info(
+            "Maintainer simulator training: uses labeled PR outcome data from synthesis"
+        )
         logger.info(f"Data dir: {args.data_dir}")
-        logger.info("In production, fine-tune a classification head on Qwen2.5-7B embeddings")
+        logger.info(
+            "In production, fine-tune a classification head on Qwen2.5-7B embeddings"
+        )
         logger.info("using binary merge/reject labels from the PR outcome corpus.")
 
 

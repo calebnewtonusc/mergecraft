@@ -26,7 +26,7 @@ import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Optional
 
@@ -109,12 +109,13 @@ CONVENTION_PATTERNS = {
 @dataclass
 class ContributionConventions:
     """Extracted contribution conventions for a repo."""
+
     repo: str
     has_contributing_doc: bool
-    contributing_content: str           # Full text of contributing doc
-    pr_template_content: str            # PR template text
-    extracted: dict                     # Structured extracted conventions
-    raw_sources: list[str]              # Which files were found
+    contributing_content: str  # Full text of contributing doc
+    pr_template_content: str  # PR template text
+    extracted: dict  # Structured extracted conventions
+    raw_sources: list[str]  # Which files were found
 
 
 def _api_get(url: str, params: dict = None) -> Optional[dict]:
@@ -156,8 +157,7 @@ def _extract_conventions(text: str) -> dict:
 
     # Test requirement
     extracted["tests_required"] = any(
-        re.search(p, text_lower)
-        for p in CONVENTION_PATTERNS["test_required"]
+        re.search(p, text_lower) for p in CONVENTION_PATTERNS["test_required"]
     )
 
     # Style tools
@@ -169,38 +169,38 @@ def _extract_conventions(text: str) -> dict:
 
     # CI required
     extracted["ci_must_pass"] = any(
-        re.search(p, text_lower)
-        for p in CONVENTION_PATTERNS["ci_required"]
+        re.search(p, text_lower) for p in CONVENTION_PATTERNS["ci_required"]
     )
 
     # Issue required
     extracted["issue_required"] = any(
-        re.search(p, text_lower)
-        for p in CONVENTION_PATTERNS["issue_required"]
+        re.search(p, text_lower) for p in CONVENTION_PATTERNS["issue_required"]
     )
 
     # One thing per PR
     extracted["one_thing_per_pr"] = any(
-        re.search(p, text_lower)
-        for p in CONVENTION_PATTERNS["one_thing_per_pr"]
+        re.search(p, text_lower) for p in CONVENTION_PATTERNS["one_thing_per_pr"]
     )
 
     # Commit style
-    extracted["conventional_commits"] = bool(re.search(
-        r"conventional\s+commits?|(?:feat|fix|docs|chore)\s*:", text_lower
-    ))
+    extracted["conventional_commits"] = bool(
+        re.search(r"conventional\s+commits?|(?:feat|fix|docs|chore)\s*:", text_lower)
+    )
 
     # DCO/CLA
     extracted["requires_dco_or_cla"] = any(
-        re.search(p, text_lower)
-        for p in CONVENTION_PATTERNS["dco_cla"]
+        re.search(p, text_lower) for p in CONVENTION_PATTERNS["dco_cla"]
     )
 
     # Language/framework-specific checks
-    extracted["code_review_guidelines"] = "code review" in text_lower or "reviewer" in text_lower
-    extracted["documentation_required"] = bool(re.search(
-        r"(?:update|add|include)\s+(?:docs?|documentation|changelog)", text_lower
-    ))
+    extracted["code_review_guidelines"] = (
+        "code review" in text_lower or "reviewer" in text_lower
+    )
+    extracted["documentation_required"] = bool(
+        re.search(
+            r"(?:update|add|include)\s+(?:docs?|documentation|changelog)", text_lower
+        )
+    )
 
     return extracted
 
@@ -259,7 +259,13 @@ def get_top_repos_by_stars(n: int = 2000) -> list[str]:
         for page in range(1, 11):
             data = _api_get(
                 f"{GITHUB_API}/search/repositories",
-                params={"q": query, "sort": "stars", "order": "desc", "per_page": 100, "page": page},
+                params={
+                    "q": query,
+                    "sort": "stars",
+                    "order": "desc",
+                    "per_page": 100,
+                    "page": page,
+                },
             )
             if not data:
                 break
@@ -276,7 +282,9 @@ def get_top_repos_by_stars(n: int = 2000) -> list[str]:
 def main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Collect contribution guidelines from top repos")
+    parser = argparse.ArgumentParser(
+        description="Collect contribution guidelines from top repos"
+    )
     parser.add_argument("--top-repos", type=int, default=2000)
     parser.add_argument("--workers", type=int, default=20)
     parser.add_argument("--output", default="data/raw/contributing")
@@ -301,12 +309,17 @@ def main() -> None:
                 except json.JSONDecodeError:
                     pass
     repos_to_process = [r for r in repos if r not in already_written]
-    logger.info(f"Skipping {len(repos) - len(repos_to_process)} already-collected repos")
+    logger.info(
+        f"Skipping {len(repos) - len(repos_to_process)} already-collected repos"
+    )
 
     total = 0
     with open(conventions_path, "a") as out_f:
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
-            futures = {executor.submit(collect_repo_conventions, r): r for r in repos_to_process}
+            futures = {
+                executor.submit(collect_repo_conventions, r): r
+                for r in repos_to_process
+            }
             for future in as_completed(futures):
                 repo = futures[future]
                 try:

@@ -28,8 +28,8 @@ TARGET_URLS = [
 ]
 
 SEARCH_QUERIES = [
-    "site:dev.to \"why I close PRs\" OR \"open source maintainer\" contributions",
-    "site:medium.com \"open source maintainer\" \"pull request\" quality rejected",
+    'site:dev.to "why I close PRs" OR "open source maintainer" contributions',
+    'site:medium.com "open source maintainer" "pull request" quality rejected',
 ]
 
 
@@ -39,7 +39,7 @@ def scrape_article(url: str, session: requests.Session) -> dict | None:
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
 
-        title = (soup.find("h1") or soup.find("title") or soup.find("h2"))
+        title = soup.find("h1") or soup.find("title") or soup.find("h2")
         title_text = title.get_text(strip=True) if title else url
 
         # Extract main content

@@ -13,15 +13,14 @@ Usage:
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import json
-import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from loguru import logger
 
-from synthesis.prompts import CONTRIBUTION_SYSTEM, CONTRIBUTION_USER
 
 RAW_DIR = Path("data/raw/prs")
 SYNTHESIZED_DIR = Path("data/synthesized")
@@ -65,28 +64,32 @@ def synthesize_from_pr_file(jsonl_path: Path, output_dir: Path) -> int:
                 continue
 
             if pr.get("outcome") == "merged":
-                pairs.append({
-                    "id": pr["id"],
-                    "repo": pr["repo"],
-                    "task": pr_to_task_description(pr),
-                    "contribution": pr_to_contribution(pr),
-                    "outcome": "merged",
-                    "rejection_reason": None,
-                    "merge_probability_label": 1.0,
-                    "metadata": pr.get("metadata", {}),
-                })
+                pairs.append(
+                    {
+                        "id": pr["id"],
+                        "repo": pr["repo"],
+                        "task": pr_to_task_description(pr),
+                        "contribution": pr_to_contribution(pr),
+                        "outcome": "merged",
+                        "rejection_reason": None,
+                        "merge_probability_label": 1.0,
+                        "metadata": pr.get("metadata", {}),
+                    }
+                )
             else:
-                pairs.append({
-                    "id": pr["id"],
-                    "repo": pr["repo"],
-                    "task": pr_to_task_description(pr),
-                    "contribution": pr_to_contribution(pr),
-                    "outcome": "rejected",
-                    "rejection_reason": pr.get("rejection_reason"),
-                    "closing_comment": pr.get("closing_comment", ""),
-                    "merge_probability_label": 0.0,
-                    "metadata": pr.get("metadata", {}),
-                })
+                pairs.append(
+                    {
+                        "id": pr["id"],
+                        "repo": pr["repo"],
+                        "task": pr_to_task_description(pr),
+                        "contribution": pr_to_contribution(pr),
+                        "outcome": "rejected",
+                        "rejection_reason": pr.get("rejection_reason"),
+                        "closing_comment": pr.get("closing_comment", ""),
+                        "merge_probability_label": 0.0,
+                        "metadata": pr.get("metadata", {}),
+                    }
+                )
 
     if pairs:
         out_path = output_dir / f"{jsonl_path.stem}_synthesized.jsonl"
@@ -105,7 +108,9 @@ def synthesize_all(input_dir: Path, output_dir: Path, workers: int = 8) -> int:
 
     total = 0
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {executor.submit(synthesize_from_pr_file, f, output_dir): f for f in pr_files}
+        futures = {
+            executor.submit(synthesize_from_pr_file, f, output_dir): f for f in pr_files
+        }
         for future in as_completed(futures):
             count = future.result()
             total += count

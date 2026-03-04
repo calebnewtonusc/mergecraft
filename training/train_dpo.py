@@ -65,19 +65,23 @@ def load_preference_data(config: DPOConfig_) -> Dataset:
         merged = [e for e in examples if e.get("outcome") == "merged"]
         rejected = [e for e in examples if e.get("outcome") == "rejected"]
         if merged and rejected:
-            pairs.append({
-                "prompt": f"Repository: {repo}\nTask: {merged[0].get('task', '')}",
-                "chosen": merged[0].get("contribution", ""),
-                "rejected": rejected[0].get("contribution", ""),
-            })
+            pairs.append(
+                {
+                    "prompt": f"Repository: {repo}\nTask: {merged[0].get('task', '')}",
+                    "chosen": merged[0].get("contribution", ""),
+                    "rejected": rejected[0].get("contribution", ""),
+                }
+            )
 
     if not pairs:
         logger.warning("No contrastive pairs found — using synthetic fallback")
-        pairs = [{
-            "prompt": "Repository: fastapi/fastapi\nTask: Add response_model_exclude_none parameter",
-            "chosen": "Complete, tested PR with proper description linking issue and explaining why",
-            "rejected": "Quick fix without tests or description",
-        }]
+        pairs = [
+            {
+                "prompt": "Repository: fastapi/fastapi\nTask: Add response_model_exclude_none parameter",
+                "chosen": "Complete, tested PR with proper description linking issue and explaining why",
+                "rejected": "Quick fix without tests or description",
+            }
+        ]
 
     # MC-30: Shuffle pairs before returning to avoid ordering bias
     random.shuffle(pairs)
@@ -93,14 +97,18 @@ def train(config: DPOConfig_) -> None:
     adapter_cfg = json.load(open(Path(config.base_model) / "adapter_config.json"))
     true_base = adapter_cfg["base_model_name_or_path"]
     _base = AutoModelForCausalLM.from_pretrained(
-        true_base, torch_dtype=torch.bfloat16, device_map=None,
+        true_base,
+        torch_dtype=torch.bfloat16,
+        device_map=None,
     )
     model = PeftModel.from_pretrained(_base, config.base_model)
     model.enable_input_require_grads()
     # ref_model must be a separate frozen copy — load the base independently so
     # the two models share no state.
     _ref_base = AutoModelForCausalLM.from_pretrained(
-        true_base, torch_dtype=torch.bfloat16, device_map=None,
+        true_base,
+        torch_dtype=torch.bfloat16,
+        device_map=None,
     )
     ref_model = PeftModel.from_pretrained(_ref_base, config.base_model)
     ref_model.enable_input_require_grads()
@@ -117,8 +125,11 @@ def train(config: DPOConfig_) -> None:
         report_to="wandb" if os.getenv("WANDB_API_KEY") else [],
     )
     trainer = DPOTrainer(
-        model=model, ref_model=ref_model, processing_class=tokenizer,
-        args=dpo_args, train_dataset=dataset,
+        model=model,
+        ref_model=ref_model,
+        processing_class=tokenizer,
+        args=dpo_args,
+        train_dataset=dataset,
     )
     try:
         trainer.train()
@@ -129,6 +140,7 @@ def train(config: DPOConfig_) -> None:
 
 def main() -> None:
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--base_model", default="checkpoints/grpo")
     parser.add_argument("--output_dir", default="./checkpoints/final")
@@ -136,7 +148,11 @@ def main() -> None:
     parser.add_argument("--deepspeed", default=None)
     parser.add_argument("--local_rank", type=int, default=-1)
     args = parser.parse_args()
-    train(DPOConfig_(base_model=args.base_model, output_dir=args.output_dir, beta=args.beta))
+    train(
+        DPOConfig_(
+            base_model=args.base_model, output_dir=args.output_dir, beta=args.beta
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ Usage:
 
 import sys
 from pathlib import Path
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import argparse
@@ -33,6 +34,7 @@ from loguru import logger
 
 try:
     import anthropic
+
     HAS_ANTHROPIC = True
 except ImportError:
     HAS_ANTHROPIC = False
@@ -95,6 +97,7 @@ SYNTHETIC_SCENARIOS = [
 # Top-level async API helpers (spec-compliant)
 # ─────────────────────────────────────────────────────────────
 
+
 async def call_vllm(
     client: aiohttp.ClientSession,
     base_url: str,
@@ -106,7 +109,12 @@ async def call_vllm(
     resp = await client.post(
         f"{base_url}/v1/chat/completions",
         headers={"Authorization": f"Bearer {api_key}"},
-        json={"model": model, "messages": messages, "max_tokens": 4096, "temperature": 0.8},
+        json={
+            "model": model,
+            "messages": messages,
+            "max_tokens": 4096,
+            "temperature": 0.8,
+        },
         timeout=aiohttp.ClientTimeout(total=120.0),
     )
     resp.raise_for_status()
@@ -142,6 +150,7 @@ async def call_claude(
 # ─────────────────────────────────────────────────────────────
 # Synthesizer class
 # ─────────────────────────────────────────────────────────────
+
 
 class ContributionSynthesizer:
     def __init__(
@@ -186,7 +195,9 @@ class ContributionSynthesizer:
                     {"role": "system", "content": system},
                     {"role": "user", "content": user},
                 ]
-                return await call_vllm(session, endpoint, messages, self.model_name, self.vllm_api_key)
+                return await call_vllm(
+                    session, endpoint, messages, self.model_name, self.vllm_api_key
+                )
             except Exception as e:
                 logger.debug(f"vLLM call failed at {endpoint}: {e}")
 
@@ -265,14 +276,16 @@ class ContributionSynthesizer:
         completed = 0
         async with aiohttp.ClientSession() as session:
             for i in range(0, len(tasks_list), batch_size):
-                batch = tasks_list[i:i + batch_size]
+                batch = tasks_list[i : i + batch_size]
                 coros = [self._synthesize_single(session, s, t) for s, t in batch]
                 results = await asyncio.gather(*coros, return_exceptions=True)
 
                 with out_file.open("a") as fh:
                     for result in results:
                         if isinstance(result, BaseException):
-                            logger.warning(f"Synthesis task raised an exception: {result}")
+                            logger.warning(
+                                f"Synthesis task raised an exception: {result}"
+                            )
                         elif isinstance(result, dict):
                             fh.write(json.dumps(result) + "\n")
                             completed += 1

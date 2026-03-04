@@ -23,8 +23,6 @@ from peft import LoraConfig, TaskType, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import SFTConfig, SFTTrainer
 
-from synthesis.prompts import CONTRIBUTION_SYSTEM
-
 
 @dataclass
 class SFTConfig_:
@@ -33,7 +31,9 @@ class SFTConfig_:
     num_train_epochs: int = 3
     per_device_train_batch_size: int = 2
     gradient_accumulation_steps: int = 4
-    learning_rate: float = 1e-4  # MC-18: 2e-4 was too high and caused training instability
+    learning_rate: float = (
+        1e-4  # MC-18: 2e-4 was too high and caused training instability
+    )
     max_seq_length: int = 8192
     lora_r: int = 64
     lora_alpha: int = 128
@@ -55,7 +55,11 @@ def format_example(example: dict) -> str:
     task = example.get("task", "")
     contribution = example.get("contribution", "")
     repo = example.get("repo", "")
-    conventions = json.dumps(example.get("conventions", {}), indent=2) if example.get("conventions") else ""
+    conventions = (
+        json.dumps(example.get("conventions", {}), indent=2)
+        if example.get("conventions")
+        else ""
+    )
 
     user_msg = f"Repository: {repo}\nTask: {task}"
     if conventions:
@@ -93,20 +97,32 @@ def load_training_data(config: SFTConfig_) -> tuple[Dataset, Dataset]:
     random.shuffle(examples)
     texts = [format_example(ex) for ex in examples]
     split = int(len(texts) * 0.95)
-    return Dataset.from_dict({"text": texts[:split]}), Dataset.from_dict({"text": texts[split:]})
+    return Dataset.from_dict({"text": texts[:split]}), Dataset.from_dict(
+        {"text": texts[split:]}
+    )
 
 
 def train(config: SFTConfig_) -> None:
     tokenizer = AutoTokenizer.from_pretrained(config.base_model)
     model = AutoModelForCausalLM.from_pretrained(
-        config.base_model, torch_dtype=torch.bfloat16, device_map=None,
+        config.base_model,
+        torch_dtype=torch.bfloat16,
+        device_map=None,
     )
     lora = LoraConfig(
         task_type=TaskType.CAUSAL_LM,
         r=config.lora_r,
         lora_alpha=config.lora_alpha,
         lora_dropout=config.lora_dropout,
-        target_modules=["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+        target_modules=[
+            "q_proj",
+            "k_proj",
+            "v_proj",
+            "o_proj",
+            "gate_proj",
+            "up_proj",
+            "down_proj",
+        ],
     )
     model = get_peft_model(model, lora)
     model.enable_input_require_grads()
@@ -128,8 +144,11 @@ def train(config: SFTConfig_) -> None:
         report_to="wandb" if os.getenv("WANDB_API_KEY") else [],
     )
     trainer = SFTTrainer(
-        model=model, processing_class=tokenizer,
-        train_dataset=train_ds, eval_dataset=val_ds, args=sft_args,
+        model=model,
+        processing_class=tokenizer,
+        train_dataset=train_ds,
+        eval_dataset=val_ds,
+        args=sft_args,
     )
     trainer.train()
     trainer.save_model(config.output_dir)
@@ -138,6 +157,7 @@ def train(config: SFTConfig_) -> None:
 
 def main() -> None:
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_dir", default="./checkpoints/sft")
     parser.add_argument("--deepspeed", default=None)

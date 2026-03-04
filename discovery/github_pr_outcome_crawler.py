@@ -40,49 +40,93 @@ _github_client: Github = Github(GITHUB_TOKEN) if GITHUB_TOKEN else Github()
 # Rejection reason patterns (applied to closing comments)
 REJECTION_PATTERNS = {
     "SCOPE_TOO_LARGE": [
-        r"too large", r"please split", r"too many files", r"too many changes",
-        r"scope", r"separate pr", r"smaller pr",
+        r"too large",
+        r"please split",
+        r"too many files",
+        r"too many changes",
+        r"scope",
+        r"separate pr",
+        r"smaller pr",
     ],
     "MISSING_TESTS": [
-        r"needs tests", r"please add tests", r"no tests", r"test coverage",
-        r"missing test", r"add.*test",
+        r"needs tests",
+        r"please add tests",
+        r"no tests",
+        r"test coverage",
+        r"missing test",
+        r"add.*test",
     ],
     "CONVENTION_VIOLATION": [
-        r"please run", r"formatting", r"style guide", r"see contributing",
-        r"code style", r"black", r"flake8", r"ruff", r"prettier", r"gofmt",
+        r"please run",
+        r"formatting",
+        r"style guide",
+        r"see contributing",
+        r"code style",
+        r"black",
+        r"flake8",
+        r"ruff",
+        r"prettier",
+        r"gofmt",
     ],
     "NO_LINKED_ISSUE": [
-        r"please open an issue", r"not discussed", r"needs design", r"discuss first",
-        r"open.*issue.*first", r"without.*issue",
+        r"please open an issue",
+        r"not discussed",
+        r"needs design",
+        r"discuss first",
+        r"open.*issue.*first",
+        r"without.*issue",
     ],
     "DCO_MISSING": [
-        r"dco", r"signed-off-by", r"cla", r"contributor license",
+        r"dco",
+        r"signed-off-by",
+        r"cla",
+        r"contributor license",
     ],
     "DESCRIPTION_INADEQUATE": [
-        r"please explain", r"what is the use case", r"why.*change",
-        r"more context", r"need.*description",
+        r"please explain",
+        r"what is the use case",
+        r"why.*change",
+        r"more context",
+        r"need.*description",
     ],
     "QUALITY": [
-        r"doesn't work", r"breaks", r"wrong approach", r"not the right way",
-        r"incorrect", r"fails.*test",
+        r"doesn't work",
+        r"breaks",
+        r"wrong approach",
+        r"not the right way",
+        r"incorrect",
+        r"fails.*test",
     ],
 }
 
 TOP_REPOS_BY_DOMAIN = [
     # Python
-    "django/django", "fastapi/fastapi", "pallets/flask",
-    "psf/requests", "numpy/numpy", "scikit-learn/scikit-learn",
-    "huggingface/transformers", "pytorch/pytorch",
+    "django/django",
+    "fastapi/fastapi",
+    "pallets/flask",
+    "psf/requests",
+    "numpy/numpy",
+    "scikit-learn/scikit-learn",
+    "huggingface/transformers",
+    "pytorch/pytorch",
     # JavaScript
-    "facebook/react", "vuejs/vue", "vercel/next.js",
-    "expressjs/express", "microsoft/typescript",
+    "facebook/react",
+    "vuejs/vue",
+    "vercel/next.js",
+    "expressjs/express",
+    "microsoft/typescript",
     # Go
-    "kubernetes/kubernetes", "docker/docker-ce",
-    "golang/go", "gin-gonic/gin",
+    "kubernetes/kubernetes",
+    "docker/docker-ce",
+    "golang/go",
+    "gin-gonic/gin",
     # Rust
-    "rust-lang/rust", "tokio-rs/tokio", "serde-rs/serde",
+    "rust-lang/rust",
+    "tokio-rs/tokio",
+    "serde-rs/serde",
     # DevOps
-    "hashicorp/terraform", "ansible/ansible",
+    "hashicorp/terraform",
+    "ansible/ansible",
 ]
 
 
@@ -109,12 +153,9 @@ def extract_pr_metadata(pr: Any) -> dict:
             "files_changed": len(files),
             "commit_count": pr.commits,
             "review_comments": pr.review_comments,
-            "has_tests": any(
-                "test" in f.filename.lower() for f in files
-            ),
-            "links_issue": pr.body is not None and (
-                "#" in pr.body or "issue" in pr.body.lower()
-            ),
+            "has_tests": any("test" in f.filename.lower() for f in files),
+            "links_issue": pr.body is not None
+            and ("#" in pr.body or "issue" in pr.body.lower()),
             "has_dco": pr.body is not None and "Signed-off-by:" in pr.body,
         }
     except Exception:
@@ -219,7 +260,9 @@ def main() -> None:
                     total_prs += len(prs)
                     merged = sum(1 for p in prs if p["outcome"] == "merged")
                     rejected = sum(1 for p in prs if p["outcome"] == "rejected")
-                    logger.info(f"  {repo}: {merged} merged, {rejected} rejected → {path.name}")
+                    logger.info(
+                        f"  {repo}: {merged} merged, {rejected} rejected → {path.name}"
+                    )
             except Exception as e:
                 logger.error(f"  {repo} failed: {e}")
 

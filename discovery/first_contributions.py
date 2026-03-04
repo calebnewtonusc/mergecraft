@@ -15,10 +15,9 @@ Usage:
 
 import json
 import os
-import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Optional
 
@@ -49,6 +48,7 @@ FIRST_ISSUE_LABELS = [
 @dataclass
 class FirstContributionTriple:
     """issue_description + implementation_diff + maintainer_feedback triple."""
+
     id: str
     repo: str
     issue_number: int
@@ -57,8 +57,8 @@ class FirstContributionTriple:
     issue_body: str
     pr_title: str
     pr_description: str
-    maintainer_feedback: list[dict]   # review comments from maintainers
-    outcome: str                       # "merged" | "rejected" | "pending"
+    maintainer_feedback: list[dict]  # review comments from maintainers
+    outcome: str  # "merged" | "rejected" | "pending"
     issue_labels: list[str]
     pr_metadata: dict
 
@@ -84,7 +84,7 @@ def _get_linked_pr(repo: str, issue_number: int) -> Optional[dict]:
     data = _api_get(
         f"{GITHUB_API}/search/issues",
         params={
-            "q": f"repo:{repo} type:pr is:merged in:body \"closes #{issue_number}\"",
+            "q": f'repo:{repo} type:pr is:merged in:body "closes #{issue_number}"',
             "per_page": 5,
         },
     )
@@ -97,7 +97,7 @@ def _get_linked_pr(repo: str, issue_number: int) -> Optional[dict]:
     data = _api_get(
         f"{GITHUB_API}/search/issues",
         params={
-            "q": f"repo:{repo} type:pr is:merged \"#{issue_number}\"",
+            "q": f'repo:{repo} type:pr is:merged "#{issue_number}"',
             "per_page": 5,
         },
     )
@@ -220,7 +220,9 @@ def collect_repo_first_contributions(
 def main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Collect good-first-issue contribution triples")
+    parser = argparse.ArgumentParser(
+        description="Collect good-first-issue contribution triples"
+    )
     parser.add_argument("--top-repos", type=int, default=500)
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--limit", type=int, default=200, help="Triples per repo")
@@ -233,12 +235,17 @@ def main() -> None:
 
     try:
         from discovery.merged_pr_corpus import TOP_REPOS
-        repos = TOP_REPOS[:args.top_repos]
+
+        repos = TOP_REPOS[: args.top_repos]
     except ImportError:
         repos = [
-            "django/django", "fastapi/fastapi", "pallets/flask",
-            "numpy/numpy", "facebook/react", "golang/go",
-        ][:args.top_repos]
+            "django/django",
+            "fastapi/fastapi",
+            "pallets/flask",
+            "numpy/numpy",
+            "facebook/react",
+            "golang/go",
+        ][: args.top_repos]
 
     logger.info(f"Collecting first-contribution triples from {len(repos)} repos")
 
@@ -259,7 +266,10 @@ def main() -> None:
     total = 0
     with open(out_file, "a") as out_f:
         with ThreadPoolExecutor(max_workers=args.workers) as executor:
-            futures = {executor.submit(collect_repo_first_contributions, r, args.limit): r for r in repos}
+            futures = {
+                executor.submit(collect_repo_first_contributions, r, args.limit): r
+                for r in repos
+            }
             for future in as_completed(futures):
                 repo = futures[future]
                 try:

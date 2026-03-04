@@ -84,7 +84,12 @@ async def contribute(request: ContributeRequest):
             "files_changed": max(1, code_diff.count("diff --git")),
             "has_tests": any(
                 kw in code_diff
-                for kw in ["def test_", "class Test", "import pytest", "import unittest"]
+                for kw in [
+                    "def test_",
+                    "class Test",
+                    "import pytest",
+                    "import unittest",
+                ]
             ),
             "links_issue": any(
                 kw in code_diff.lower() for kw in ["closes #", "fixes #", "resolves #"]
@@ -118,6 +123,7 @@ async def contribute(request: ContributeRequest):
 async def score(request: ScoreRequest):
     from synthesis.maintainer_simulator import MaintainerSimulator
     from core.project_conventions import ConventionExtractor
+
     sim = MaintainerSimulator()
     # Use caller-supplied conventions when provided; otherwise extract them live
     # from the repository so rule-based checks (max_pr_size, test_required,
@@ -129,7 +135,9 @@ async def score(request: ScoreRequest):
             extractor = ConventionExtractor(github_token=os.getenv("GITHUB_TOKEN"))
             conventions = extractor.extract(request.repo).to_dict()
         except Exception as e:
-            logger.warning(f"Convention extraction failed for {request.repo}: {e}; using defaults")
+            logger.warning(
+                f"Convention extraction failed for {request.repo}: {e}; using defaults"
+            )
             conventions = {}
     result = sim.score(
         repo=request.repo,
@@ -149,4 +157,5 @@ async def score(request: ScoreRequest):
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("API_PORT", "8000")))

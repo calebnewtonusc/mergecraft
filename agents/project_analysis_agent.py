@@ -9,9 +9,6 @@ Usage:
     conventions = agent.analyze("https://github.com/fastapi/fastapi")
 """
 
-from pathlib import Path
-from typing import Any
-
 from loguru import logger
 
 from core.project_conventions import ConventionExtractor, ProjectConventions
@@ -28,6 +25,7 @@ class ProjectAnalysisAgent:
     def _repo_from_url(self, url: str) -> str:
         """Extract owner/repo from GitHub URL."""
         import re
+
         m = re.search(r"github\.com/([^/]+/[^/]+?)(?:\.git|/|$)", url)
         if m:
             return m.group(1)

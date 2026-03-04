@@ -17,7 +17,6 @@ Usage:
 
 import re
 from dataclasses import dataclass
-from typing import Any
 
 from loguru import logger
 
@@ -30,7 +29,7 @@ class ScopeDecision:
 
     action: str  # "proceed" / "split" / "reduce"
     rationale: str
-    primary_changes: dict          # The main PR to submit
+    primary_changes: dict  # The main PR to submit
     follow_up_changes: list[dict]  # Follow-up PRs (if split)
     estimated_lines: int
     concerns_addressed: int
@@ -45,7 +44,11 @@ class ScopeAgent:
     def _count_lines_changed(self, code_changes: dict) -> int:
         """Count lines added in the code changes."""
         changes = code_changes.get("code_changes", "")
-        added = [l for l in changes.splitlines() if l.startswith("+") and not l.startswith("+++")]
+        added = [
+            l
+            for l in changes.splitlines()
+            if l.startswith("+") and not l.startswith("+++")
+        ]
         return len(added)
 
     def _count_concerns(self, code_changes: dict) -> int:

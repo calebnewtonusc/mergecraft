@@ -19,7 +19,7 @@ import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Optional
 
@@ -39,77 +39,174 @@ RAW_DIR = Path("data/raw/merged_prs")
 # Top 500 OSS repos by domain — covering all major languages
 TOP_REPOS = [
     # Python
-    "django/django", "fastapi/fastapi", "pallets/flask", "psf/requests",
-    "numpy/numpy", "pandas-dev/pandas", "scikit-learn/scikit-learn",
-    "huggingface/transformers", "pytorch/pytorch", "tensorflow/tensorflow",
-    "python/cpython", "pypa/pip", "celery/celery", "sqlalchemy/sqlalchemy",
-    "pytest-dev/pytest", "encode/httpx", "tiangolo/sqlmodel",
-    "pydantic/pydantic", "encode/starlette", "aio-libs/aiohttp",
+    "django/django",
+    "fastapi/fastapi",
+    "pallets/flask",
+    "psf/requests",
+    "numpy/numpy",
+    "pandas-dev/pandas",
+    "scikit-learn/scikit-learn",
+    "huggingface/transformers",
+    "pytorch/pytorch",
+    "tensorflow/tensorflow",
+    "python/cpython",
+    "pypa/pip",
+    "celery/celery",
+    "sqlalchemy/sqlalchemy",
+    "pytest-dev/pytest",
+    "encode/httpx",
+    "tiangolo/sqlmodel",
+    "pydantic/pydantic",
+    "encode/starlette",
+    "aio-libs/aiohttp",
     # JavaScript / TypeScript
-    "facebook/react", "vuejs/vue", "vercel/next.js", "expressjs/express",
-    "microsoft/typescript", "denoland/deno", "sveltejs/svelte",
-    "nestjs/nest", "socketio/socket.io", "axios/axios",
-    "webpack/webpack", "vitejs/vite", "prettier/prettier", "eslint/eslint",
-    "babel/babel", "jestjs/jest", "testing-library/react-testing-library",
+    "facebook/react",
+    "vuejs/vue",
+    "vercel/next.js",
+    "expressjs/express",
+    "microsoft/typescript",
+    "denoland/deno",
+    "sveltejs/svelte",
+    "nestjs/nest",
+    "socketio/socket.io",
+    "axios/axios",
+    "webpack/webpack",
+    "vitejs/vite",
+    "prettier/prettier",
+    "eslint/eslint",
+    "babel/babel",
+    "jestjs/jest",
+    "testing-library/react-testing-library",
     # Go
-    "golang/go", "kubernetes/kubernetes", "docker/cli",
-    "hashicorp/terraform", "gin-gonic/gin", "labstack/echo",
-    "gorilla/mux", "spf13/cobra", "urfave/cli",
+    "golang/go",
+    "kubernetes/kubernetes",
+    "docker/cli",
+    "hashicorp/terraform",
+    "gin-gonic/gin",
+    "labstack/echo",
+    "gorilla/mux",
+    "spf13/cobra",
+    "urfave/cli",
     # Rust
-    "rust-lang/rust", "tokio-rs/tokio", "serde-rs/serde",
-    "actix/actix-web", "hyperium/hyper", "clap-rs/clap",
+    "rust-lang/rust",
+    "tokio-rs/tokio",
+    "serde-rs/serde",
+    "actix/actix-web",
+    "hyperium/hyper",
+    "clap-rs/clap",
     # Java
-    "spring-projects/spring-boot", "apache/kafka",
-    "elastic/elasticsearch", "netty/netty", "junit-team/junit5",
+    "spring-projects/spring-boot",
+    "apache/kafka",
+    "elastic/elasticsearch",
+    "netty/netty",
+    "junit-team/junit5",
     # C/C++
-    "torvalds/linux", "llvm/llvm-project", "nginx/nginx",
-    "redis/redis", "postgres/postgres",
+    "torvalds/linux",
+    "llvm/llvm-project",
+    "nginx/nginx",
+    "redis/redis",
+    "postgres/postgres",
     # Ruby
-    "rails/rails", "mperham/sidekiq", "puma/puma",
+    "rails/rails",
+    "mperham/sidekiq",
+    "puma/puma",
     # DevOps / Infrastructure
-    "ansible/ansible", "helm/helm", "prometheus/prometheus",
-    "grafana/grafana", "istio/istio", "argoproj/argo-cd",
+    "ansible/ansible",
+    "helm/helm",
+    "prometheus/prometheus",
+    "grafana/grafana",
+    "istio/istio",
+    "argoproj/argo-cd",
 ]
 
 # Rejection reason patterns
 REJECTION_PATTERNS = {
     "SCOPE_TOO_LARGE": [
-        r"too large", r"please split", r"too many files", r"too many changes",
-        r"scope creep", r"separate pr", r"smaller pr", r"break.*into",
+        r"too large",
+        r"please split",
+        r"too many files",
+        r"too many changes",
+        r"scope creep",
+        r"separate pr",
+        r"smaller pr",
+        r"break.*into",
     ],
     "MISSING_TESTS": [
-        r"needs? tests?", r"please add tests?", r"no tests?", r"test coverage",
-        r"missing test", r"add.*test", r"unit test", r"integration test",
+        r"needs? tests?",
+        r"please add tests?",
+        r"no tests?",
+        r"test coverage",
+        r"missing test",
+        r"add.*test",
+        r"unit test",
+        r"integration test",
     ],
     "CONVENTION_VIOLATION": [
-        r"please run", r"formatting", r"style guide", r"see contributing",
-        r"code style", r"black", r"flake8", r"ruff", r"prettier", r"gofmt",
-        r"lint", r"type hint", r"mypy",
+        r"please run",
+        r"formatting",
+        r"style guide",
+        r"see contributing",
+        r"code style",
+        r"black",
+        r"flake8",
+        r"ruff",
+        r"prettier",
+        r"gofmt",
+        r"lint",
+        r"type hint",
+        r"mypy",
     ],
     "NO_LINKED_ISSUE": [
-        r"please open an issue", r"not discussed", r"needs design",
-        r"discuss first", r"open.*issue.*first", r"without.*issue",
-        r"not planned", r"out of scope",
+        r"please open an issue",
+        r"not discussed",
+        r"needs design",
+        r"discuss first",
+        r"open.*issue.*first",
+        r"without.*issue",
+        r"not planned",
+        r"out of scope",
     ],
     "DCO_CLA": [
-        r"dco", r"signed-off-by", r"cla", r"contributor license",
+        r"dco",
+        r"signed-off-by",
+        r"cla",
+        r"contributor license",
         r"sign.*agreement",
     ],
     "DESCRIPTION_INADEQUATE": [
-        r"please explain", r"what is the use case", r"why.*change",
-        r"more context", r"need.*description", r"motivation", r"rationale",
+        r"please explain",
+        r"what is the use case",
+        r"why.*change",
+        r"more context",
+        r"need.*description",
+        r"motivation",
+        r"rationale",
     ],
     "QUALITY_ISSUE": [
-        r"doesn'?t work", r"breaks", r"wrong approach", r"not the right way",
-        r"incorrect", r"fails.*test", r"regression", r"bug.*introduced",
+        r"doesn'?t work",
+        r"breaks",
+        r"wrong approach",
+        r"not the right way",
+        r"incorrect",
+        r"fails.*test",
+        r"regression",
+        r"bug.*introduced",
     ],
     "DUPLICATE": [
-        r"duplicate", r"already exists", r"already merged", r"covered by",
-        r"same as #", r"see #\d+",
+        r"duplicate",
+        r"already exists",
+        r"already merged",
+        r"covered by",
+        r"same as #",
+        r"see #\d+",
     ],
     "WONTFIX": [
-        r"won'?t fix", r"by design", r"not a bug", r"working as intended",
-        r"won'?t merge", r"closing this",
+        r"won'?t fix",
+        r"by design",
+        r"not a bug",
+        r"working as intended",
+        r"won'?t merge",
+        r"closing this",
     ],
 }
 
@@ -117,17 +214,18 @@ REJECTION_PATTERNS = {
 @dataclass
 class PRRecord:
     """A single PR record with outcome labels."""
+
     id: str
     repo: str
     pr_number: int
     pr_title: str
     pr_description: str
-    outcome: str               # "merged" | "rejected"
+    outcome: str  # "merged" | "rejected"
     rejection_reason: Optional[str]
     closing_comment: str
     review_comments: list[dict]  # [{author, body, type}]
-    approval_events: list[str]   # approving reviewer handles
-    metadata: dict              # lines_added, files_changed, has_tests, etc.
+    approval_events: list[str]  # approving reviewer handles
+    metadata: dict  # lines_added, files_changed, has_tests, etc.
     conventions_followed: dict  # detected convention compliance signals
 
 
@@ -161,7 +259,9 @@ def _classify_rejection(comment_body: str) -> str:
 
 def _extract_pr_metadata(repo: str, pr_number: int) -> dict:
     """Fetch file diff stats for a PR."""
-    data = _api_get(f"{GITHUB_API}/repos/{repo}/pulls/{pr_number}/files", params={"per_page": 100})
+    data = _api_get(
+        f"{GITHUB_API}/repos/{repo}/pulls/{pr_number}/files", params={"per_page": 100}
+    )
     if not data or not isinstance(data, list):
         return {}
     return {
@@ -183,11 +283,15 @@ def _extract_review_comments(repo: str, pr_number: int) -> list[dict]:
     )
     if review_data and isinstance(review_data, list):
         for review in review_data[:10]:
-            comments.append({
-                "author": review.get("user", {}).get("login", ""),
-                "body": review.get("body", "")[:500],
-                "type": review.get("state", ""),  # APPROVED, CHANGES_REQUESTED, COMMENTED
-            })
+            comments.append(
+                {
+                    "author": review.get("user", {}).get("login", ""),
+                    "body": review.get("body", "")[:500],
+                    "type": review.get(
+                        "state", ""
+                    ),  # APPROVED, CHANGES_REQUESTED, COMMENTED
+                }
+            )
 
     return comments
 
@@ -200,9 +304,7 @@ def _extract_approval_events(repo: str, pr_number: int) -> list[str]:
     if not data or not isinstance(data, list):
         return []
     return [
-        r.get("user", {}).get("login", "")
-        for r in data
-        if r.get("state") == "APPROVED"
+        r.get("user", {}).get("login", "") for r in data if r.get("state") == "APPROVED"
     ]
 
 
@@ -211,18 +313,30 @@ def _check_conventions(pr_title: str, pr_body: str, files: list[str]) -> dict:
     body_lower = (pr_body or "").lower()
     title_lower = pr_title.lower()
     return {
-        "has_issue_reference": bool(re.search(r"#\d+|fixes|closes|resolves", body_lower)),
+        "has_issue_reference": bool(
+            re.search(r"#\d+|fixes|closes|resolves", body_lower)
+        ),
         "has_test_files": any("test" in f.lower() for f in files),
         # MC-26: "news" substring matches any filename containing "news" (e.g. "latest_news.py").
         # Restrict to exact known changelog filenames.
         "has_changelog_entry": any(
-            f.lower().rstrip("/").split("/")[-1] in
-            {"changelog.md", "changelog.rst", "changes.md", "changes.rst", "news.rst", "history.md"}
+            f.lower().rstrip("/").split("/")[-1]
+            in {
+                "changelog.md",
+                "changelog.rst",
+                "changes.md",
+                "changes.rst",
+                "news.rst",
+                "history.md",
+            }
             for f in files
         ),
-        "title_conventional_commit": bool(re.match(r"^(feat|fix|docs|chore|refactor|test|style|ci):", title_lower)),
+        "title_conventional_commit": bool(
+            re.match(r"^(feat|fix|docs|chore|refactor|test|style|ci):", title_lower)
+        ),
         "body_has_description": len(pr_body or "") > 100,
-        "body_has_checklist": "[ ]" in (pr_body or "") or "[x]" in (pr_body or "").lower(),
+        "body_has_checklist": "[ ]" in (pr_body or "")
+        or "[x]" in (pr_body or "").lower(),
     }
 
 
@@ -240,7 +354,9 @@ def collect_repo_prs(
     target_merged = int(limit * min_merged_ratio)
     target_rejected = limit - target_merged
 
-    logger.info(f"  Collecting PRs from {repo_name} (target: {target_merged}M/{target_rejected}R)...")
+    logger.info(
+        f"  Collecting PRs from {repo_name} (target: {target_merged}M/{target_rejected}R)..."
+    )
 
     page = 1
     while len(records) < limit and page <= 20:
@@ -276,7 +392,9 @@ def collect_repo_prs(
 
             metadata = _extract_pr_metadata(repo_name, pr_number)
             review_comments = _extract_review_comments(repo_name, pr_number)
-            conventions = _check_conventions(pr_title, pr_body, metadata.get("changed_files", []))
+            conventions = _check_conventions(
+                pr_title, pr_body, metadata.get("changed_files", [])
+            )
 
             closing_comment = ""
             rejection_reason = None
@@ -291,7 +409,9 @@ def collect_repo_prs(
                     closing_comment = comments[-1].get("body", "")[:1000]
                 rejection_reason = _classify_rejection(closing_comment)
 
-            approval_events = _extract_approval_events(repo_name, pr_number) if is_merged else []
+            approval_events = (
+                _extract_approval_events(repo_name, pr_number) if is_merged else []
+            )
 
             record = PRRecord(
                 id=f"{repo_name.replace('/', '_')}_{pr_number}",
@@ -337,8 +457,12 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="Collect merged/rejected PR corpus")
-    parser.add_argument("--top-repos", type=int, default=500,
-                        help="Number of repos to collect from (from TOP_REPOS list)")
+    parser.add_argument(
+        "--top-repos",
+        type=int,
+        default=500,
+        help="Number of repos to collect from (from TOP_REPOS list)",
+    )
     parser.add_argument("--repo", help="Single repo (owner/name) to collect")
     parser.add_argument("--limit", type=int, default=2000, help="PRs per repo")
     parser.add_argument("--workers", type=int, default=8)
@@ -346,7 +470,7 @@ def main() -> None:
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
-    repos = [args.repo] if args.repo else TOP_REPOS[:args.top_repos]
+    repos = [args.repo] if args.repo else TOP_REPOS[: args.top_repos]
     logger.info(f"Collecting PR outcomes from {len(repos)} repositories")
 
     total = 0

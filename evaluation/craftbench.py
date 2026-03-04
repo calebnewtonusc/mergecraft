@@ -17,9 +17,8 @@ Usage:
 
 import json
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from loguru import logger
 
@@ -32,13 +31,17 @@ def _estimate_metadata(code_diff: str) -> dict:
     """MC-3: Estimate PR metadata from the actual code diff instead of using hardcoded values."""
     lines = code_diff.splitlines()
     lines_added = sum(1 for l in lines if l.startswith("+") and not l.startswith("+++"))
-    lines_deleted = sum(1 for l in lines if l.startswith("-") and not l.startswith("---"))
+    lines_deleted = sum(
+        1 for l in lines if l.startswith("-") and not l.startswith("---")
+    )
     files_changed = max(1, code_diff.count("diff --git"))
     has_tests = any(
         kw in code_diff
         for kw in ["def test_", "class Test", "import pytest", "import unittest"]
     )
-    links_issue = any(kw in code_diff.lower() for kw in ["closes #", "fixes #", "resolves #"])
+    links_issue = any(
+        kw in code_diff.lower() for kw in ["closes #", "fixes #", "resolves #"]
+    )
     return {
         "lines_added": lines_added,
         "lines_deleted": lines_deleted,
@@ -58,7 +61,7 @@ class CraftBenchScenario:
     task: str
     category: str  # web_framework / ml_library / devops / system_tool / docs
     conventions: dict
-    ground_truth: dict     # What the project actually accepted
+    ground_truth: dict  # What the project actually accepted
     rejection_risks: list[str]  # Known rejection risks for this scenario
 
 
@@ -263,9 +266,9 @@ class CraftBench:
                 convention_compliant=convention_compliant,
                 description_quality=desc_quality,
                 overall_score=(
-                    sim_result.merge_probability * 0.5 +
-                    float(convention_compliant) * 0.3 +
-                    desc_quality * 0.2
+                    sim_result.merge_probability * 0.5
+                    + float(convention_compliant) * 0.3
+                    + desc_quality * 0.2
                 ),
                 generation_time_s=elapsed,
             )
@@ -304,13 +307,27 @@ class CraftBench:
             logger.info(f"  [{scenario.scenario_id}] {scenario.task[:50]}...")
             result = self._evaluate_scenario(scenario)
             results.append(result)
-            logger.info(f"  → merge_prob={result.simulated_merge_rate:.2f}, overall={result.overall_score:.2f}")
+            logger.info(
+                f"  → merge_prob={result.simulated_merge_rate:.2f}, overall={result.overall_score:.2f}"
+            )
 
         # Aggregate
-        overall = sum(r.simulated_merge_rate for r in results) / len(results) if results else 0
-        scope_rate = sum(1 for r in results if r.scope_correct) / len(results) if results else 0
-        conv_rate = sum(1 for r in results if r.convention_compliant) / len(results) if results else 0
-        desc_quality = sum(r.description_quality for r in results) / len(results) if results else 0
+        overall = (
+            sum(r.simulated_merge_rate for r in results) / len(results)
+            if results
+            else 0
+        )
+        scope_rate = (
+            sum(1 for r in results if r.scope_correct) / len(results) if results else 0
+        )
+        conv_rate = (
+            sum(1 for r in results if r.convention_compliant) / len(results)
+            if results
+            else 0
+        )
+        desc_quality = (
+            sum(r.description_quality for r in results) / len(results) if results else 0
+        )
 
         category_scores: dict[str, list[float]] = {}
         for r in results:
@@ -318,7 +335,9 @@ class CraftBench:
                 category_scores[r.category] = []
             category_scores[r.category].append(r.overall_score)
 
-        category_avg = {cat: sum(scores)/len(scores) for cat, scores in category_scores.items()}
+        category_avg = {
+            cat: sum(scores) / len(scores) for cat, scores in category_scores.items()
+        }
 
         summary = CraftBenchSummary(
             total_scenarios=len(results),
@@ -330,7 +349,7 @@ class CraftBench:
             results=results,
         )
 
-        logger.success(f"\n=== CRAFTBENCH RESULTS ===")
+        logger.success("\n=== CRAFTBENCH RESULTS ===")
         logger.success(f"Simulated merge rate: {overall:.1%}")
         logger.success(f"Scope correct: {scope_rate:.1%}")
         logger.success(f"Convention compliance: {conv_rate:.1%}")
@@ -363,7 +382,9 @@ def main() -> None:
     args = parser.parse_args()
 
     bench = CraftBench(model_path=args.model)
-    output = Path(args.output) if args.output else RESULTS_DIR / "craftbench_results.json"
+    output = (
+        Path(args.output) if args.output else RESULTS_DIR / "craftbench_results.json"
+    )
     bench.run(category=args.category, output_path=output)
 
 

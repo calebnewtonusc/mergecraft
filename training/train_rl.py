@@ -23,6 +23,7 @@ from datasets import Dataset
 from loguru import logger
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
+
 # MC-15: renamed GRPOConfig_ to GRPOTrainingConfig below to avoid shadowing the trl import
 from trl import GRPOConfig, GRPOTrainer
 
@@ -53,7 +54,7 @@ def build_reward_fn(simulator: MaintainerSimulator):
         for i, prompt in enumerate(prompts):
             repo = _extract_repo(prompt)
             conventions = _extract_conventions(prompt)
-            for completion in completions[i * n:(i + 1) * n]:
+            for completion in completions[i * n : (i + 1) * n]:
                 score = simulator.score(
                     repo=repo,
                     pr_title="",
@@ -71,6 +72,7 @@ def build_reward_fn(simulator: MaintainerSimulator):
 
 def _extract_repo(prompt: str) -> str:
     import re
+
     m = re.search(r"Repository:\s*(\S+)", prompt)
     return m.group(1) if m else ""
 
@@ -88,12 +90,14 @@ def _extract_conventions(prompt: str) -> dict:
 
 def _extract_pr_description(completion: str) -> str:
     import re
+
     m = re.search(r"<pr_description>(.*?)</pr_description>", completion, re.DOTALL)
     return m.group(1).strip() if m else completion[:500]
 
 
 def _extract_code_changes(completion: str) -> str:
     import re
+
     m = re.search(r"<code_changes>(.*?)</code_changes>", completion, re.DOTALL)
     return m.group(1).strip() if m else ""
 
@@ -109,7 +113,13 @@ def _estimate_metadata(completion: str) -> dict:
             continue
         if in_hunk and line.startswith("+") and not line.startswith("+++"):
             added += 1
-        elif in_hunk and not line.startswith("+") and not line.startswith("-") and not line.startswith(" ") and not line.startswith("\\"):
+        elif (
+            in_hunk
+            and not line.startswith("+")
+            and not line.startswith("-")
+            and not line.startswith(" ")
+            and not line.startswith("\\")
+        ):
             # Non-diff context line signals end of hunk
             in_hunk = False
     has_tests = (
@@ -137,13 +147,15 @@ def load_rl_dataset(config: GRPOTrainingConfig) -> Dataset:
                     try:
                         ex = json.loads(line)
                         conventions = ex.get("conventions", {})
-                        examples.append({
-                            "prompt": (
-                                f"Repository: {ex.get('repo', '')}\n"
-                                f"Task: {ex.get('task', '')}\n"
-                                f"Conventions: {json.dumps(conventions)}"
-                            ),
-                        })
+                        examples.append(
+                            {
+                                "prompt": (
+                                    f"Repository: {ex.get('repo', '')}\n"
+                                    f"Task: {ex.get('task', '')}\n"
+                                    f"Conventions: {json.dumps(conventions)}"
+                                ),
+                            }
+                        )
                     except json.JSONDecodeError:
                         pass
     if not examples:
@@ -168,7 +180,9 @@ def train(config: GRPOTrainingConfig) -> None:
     adapter_cfg = json.load(open(Path(config.base_model) / "adapter_config.json"))
     true_base = adapter_cfg["base_model_name_or_path"]
     base_model = AutoModelForCausalLM.from_pretrained(
-        true_base, torch_dtype=torch.bfloat16, device_map=None,
+        true_base,
+        torch_dtype=torch.bfloat16,
+        device_map=None,
     )
     model = PeftModel.from_pretrained(base_model, config.base_model)
     model.enable_input_require_grads()
@@ -187,8 +201,11 @@ def train(config: GRPOTrainingConfig) -> None:
         report_to="wandb" if os.getenv("WANDB_API_KEY") else [],
     )
     trainer = GRPOTrainer(
-        model=model, processing_class=tokenizer,
-        reward_funcs=[reward_fn], args=grpo_args, train_dataset=dataset,
+        model=model,
+        processing_class=tokenizer,
+        reward_funcs=[reward_fn],
+        args=grpo_args,
+        train_dataset=dataset,
     )
     try:
         trainer.train()
@@ -199,6 +216,7 @@ def train(config: GRPOTrainingConfig) -> None:
 
 def main() -> None:
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--base_model", default="checkpoints/sft")
     parser.add_argument("--output_dir", default="./checkpoints/grpo")
@@ -206,7 +224,13 @@ def main() -> None:
     parser.add_argument("--deepspeed", default=None)
     parser.add_argument("--local_rank", type=int, default=-1)
     args = parser.parse_args()
-    train(GRPOTrainingConfig(base_model=args.base_model, output_dir=args.output_dir, group_size=args.group_size))
+    train(
+        GRPOTrainingConfig(
+            base_model=args.base_model,
+            output_dir=args.output_dir,
+            group_size=args.group_size,
+        )
+    )
 
 
 if __name__ == "__main__":

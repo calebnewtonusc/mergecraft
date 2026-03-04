@@ -83,7 +83,9 @@ def extract_conventions(contributing_md: str, repo: str) -> dict:
             if m:
                 conventions["detected"][category][name] = True
                 if m.lastindex:
-                    conventions["detected"][category][f"{name}_value"] = m.group(m.lastindex)
+                    conventions["detected"][category][f"{name}_value"] = m.group(
+                        m.lastindex
+                    )
 
     # Heuristic: if nothing detected about tests, it's likely not enforced
     if not any(conventions["detected"].get("test_requirements", {}).values()):
@@ -104,7 +106,10 @@ def download_contributing_md(repo_full_name: str) -> tuple[str, str] | None:
                 data = resp.json()
                 if "content" in data:
                     import base64
-                    content = base64.b64decode(data["content"]).decode("utf-8", errors="replace")
+
+                    content = base64.b64decode(data["content"]).decode(
+                        "utf-8", errors="replace"
+                    )
                     return repo_full_name, content
         except Exception:
             pass
@@ -128,7 +133,9 @@ def search_and_collect(min_stars: int = 50, limit: int = 100000) -> int:
         }
         resp = requests.get(
             f"{GITHUB_API}/search/repositories",
-            headers=headers, params=params, timeout=30,
+            headers=headers,
+            params=params,
+            timeout=30,
         )
 
         if resp.status_code == 403:
@@ -170,7 +177,6 @@ def search_and_collect(min_stars: int = 50, limit: int = 100000) -> int:
 
 def main() -> None:
     import argparse
-    import concurrent.futures
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--min-stars", type=int, default=50)
@@ -200,7 +206,9 @@ def main() -> None:
         (output_dir / "all_conventions.jsonl").write_text(
             "\n".join(json.dumps(c) for c in all_conventions)
         )
-        logger.success(f"Extracted conventions from {len(all_conventions)} repos → {args.output}")
+        logger.success(
+            f"Extracted conventions from {len(all_conventions)} repos → {args.output}"
+        )
 
 
 if __name__ == "__main__":

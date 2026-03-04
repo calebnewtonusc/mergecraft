@@ -11,9 +11,7 @@ MergeCraft is trained on the correlation between description quality and merge r
 """
 
 import os
-import re
 
-from loguru import logger
 
 from core.project_conventions import ProjectConventions
 
@@ -87,8 +85,12 @@ class PRDescriptionAgent:
             task=task or "Contribution",
             code_summary=code_summary,
             commit_style=conventions.commit_style,
-            issue_linking="required" if conventions.commit_requires_issue_ref else "optional",
-            dco_requirement="required — add Signed-off-by" if conventions.commit_requires_dco else "not required",
+            issue_linking="required"
+            if conventions.commit_requires_issue_ref
+            else "optional",
+            dco_requirement="required — add Signed-off-by"
+            if conventions.commit_requires_dco
+            else "not required",
         )
 
         response = self._generate(prompt)
@@ -135,6 +137,7 @@ class PRDescriptionAgent:
 
     def _generate(self, prompt: str) -> str:
         import anthropic
+
         client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
         resp = client.messages.create(
             model="claude-sonnet-4-6",

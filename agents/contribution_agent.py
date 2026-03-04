@@ -15,7 +15,6 @@ Usage:
 
 import os
 import re
-from pathlib import Path
 
 from loguru import logger
 
@@ -44,11 +43,15 @@ class ContributionAgent:
         base = "Qwen/Qwen2.5-7B-Coder-Instruct"
         self._tokenizer = AutoTokenizer.from_pretrained(base)
         import torch
-        model = AutoModelForCausalLM.from_pretrained(base, device_map="auto", torch_dtype=torch.bfloat16)
+
+        model = AutoModelForCausalLM.from_pretrained(
+            base, device_map="auto", torch_dtype=torch.bfloat16
+        )
         self._model = PeftModel.from_pretrained(model, self.model_path)
 
     def _call_api(self, prompt: str) -> str:
         import anthropic
+
         client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
         resp = client.messages.create(
             model="claude-sonnet-4-6",
@@ -84,7 +87,9 @@ class ContributionAgent:
                 temperature=0.3,
                 do_sample=True,
             )
-        return self._tokenizer.decode(out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True)
+        return self._tokenizer.decode(
+            out[0][inputs["input_ids"].shape[1] :], skip_special_tokens=True
+        )
 
     def generate(
         self,
@@ -104,11 +109,14 @@ class ContributionAgent:
             commit_style=conventions.commit_style,
             test_requirement=(
                 "Required — include tests with all changes"
-                if conventions.test_required else "Optional but encouraged"
+                if conventions.test_required
+                else "Optional but encouraged"
             ),
             max_pr_size=f"{conventions.max_pr_size_soft} lines (soft limit)",
             special_requirements=(
-                "DCO Signed-off-by required" if conventions.commit_requires_dco else "none"
+                "DCO Signed-off-by required"
+                if conventions.commit_requires_dco
+                else "none"
             ),
         )
 

@@ -17,7 +17,7 @@ import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Optional
 
@@ -80,13 +80,14 @@ CHANGE_REQUEST_PATTERNS = {
 @dataclass
 class MaintainerProfile:
     """A maintainer's historical preference patterns for a repo."""
+
     handle: str
     repo: str
     merged_prs_reviewed: int
     rejected_prs_reviewed: int
     approval_rate: float
     praise_phrases: list[str]
-    common_change_requests: dict   # category -> count
+    common_change_requests: dict  # category -> count
     frequently_requested_reviewers: list[str]
     avg_review_turnaround_hours: float
 
@@ -94,9 +95,10 @@ class MaintainerProfile:
 @dataclass
 class RepoMaintainerPreferences:
     """Aggregated maintainer preferences for a repo."""
+
     repo: str
     top_maintainers: list[MaintainerProfile]
-    aggregate_preferences: dict    # What this repo consistently requires
+    aggregate_preferences: dict  # What this repo consistently requires
     rejection_signal_distribution: dict  # category -> frequency
     total_prs_analyzed: int
 
@@ -171,7 +173,9 @@ def _analyze_maintainer_reviews(
 
     page = 1
     while len(all_reviews_for_maintainer) < max_reviews and page <= 5:
-        data = _api_get(reviews_url, params={"state": "closed", "per_page": 100, "page": page})
+        data = _api_get(
+            reviews_url, params={"state": "closed", "per_page": 100, "page": page}
+        )
         if not data:
             break
         prs = data.get("items", []) if data.get("_list") else []
@@ -186,18 +190,22 @@ def _analyze_maintainer_reviews(
             )
             if not reviews:
                 continue
-            review_items = reviews.get("items", reviews) if isinstance(reviews, dict) else []
+            review_items = (
+                reviews.get("items", reviews) if isinstance(reviews, dict) else []
+            )
             if not isinstance(review_items, list):
                 continue
 
             for review in review_items:
                 reviewer = review.get("user", {}).get("login", "")
                 if reviewer == handle:
-                    all_reviews_for_maintainer.append({
-                        "pr_merged": pr.get("merged_at") is not None,
-                        "state": review.get("state", ""),
-                        "body": review.get("body", "")[:500],
-                    })
+                    all_reviews_for_maintainer.append(
+                        {
+                            "pr_merged": pr.get("merged_at") is not None,
+                            "state": review.get("state", ""),
+                            "body": review.get("body", "")[:500],
+                        }
+                    )
                     if pr.get("merged_at"):
                         merged_reviewed += 1
                     else:
@@ -259,7 +267,9 @@ def analyze_repo_maintainers(repo: str) -> Optional[RepoMaintainerPreferences]:
     # Aggregate across all maintainers
     aggregate: dict[str, object] = {}
     agg_change_requests: dict[str, int] = {}
-    total_prs = sum(m.merged_prs_reviewed + m.rejected_prs_reviewed for m in top_maintainers)
+    total_prs = sum(
+        m.merged_prs_reviewed + m.rejected_prs_reviewed for m in top_maintainers
+    )
 
     for m in top_maintainers:
         for cat, count in m.common_change_requests.items():
@@ -271,7 +281,9 @@ def analyze_repo_maintainers(repo: str) -> Optional[RepoMaintainerPreferences]:
     )
 
     # Derive aggregate preferences
-    aggregate["consistently_requires_tests"] = agg_change_requests.get("needs_tests", 0) > 3
+    aggregate["consistently_requires_tests"] = (
+        agg_change_requests.get("needs_tests", 0) > 3
+    )
     aggregate["scope_sensitive"] = agg_change_requests.get("scope_issue", 0) > 2
     aggregate["style_enforced"] = agg_change_requests.get("style_issue", 0) > 2
     aggregate["docs_valued"] = agg_change_requests.get("docs_missing", 0) > 2
@@ -290,7 +302,9 @@ def analyze_repo_maintainers(repo: str) -> Optional[RepoMaintainerPreferences]:
 def main() -> None:
     import argparse
 
-    parser = argparse.ArgumentParser(description="Collect maintainer preference patterns")
+    parser = argparse.ArgumentParser(
+        description="Collect maintainer preference patterns"
+    )
     parser.add_argument("--top-repos", type=int, default=200)
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--output", default="data/raw/maintainer_prefs")
@@ -303,12 +317,17 @@ def main() -> None:
     # Import top repos list from merged_pr_corpus
     try:
         from discovery.merged_pr_corpus import TOP_REPOS
-        repos = TOP_REPOS[:args.top_repos]
+
+        repos = TOP_REPOS[: args.top_repos]
     except ImportError:
         repos = [
-            "django/django", "fastapi/fastapi", "pallets/flask",
-            "numpy/numpy", "facebook/react", "vercel/next.js",
-        ][:args.top_repos]
+            "django/django",
+            "fastapi/fastapi",
+            "pallets/flask",
+            "numpy/numpy",
+            "facebook/react",
+            "vercel/next.js",
+        ][: args.top_repos]
 
     logger.info(f"Analyzing maintainer preferences for {len(repos)} repos")
 
