@@ -183,7 +183,7 @@ REJECTION_PATTERNS = {
         r"rationale",
     ],
     "QUALITY_ISSUE": [
-        r"doesn'?t work",
+        r"doesn'?t work",  # codespell:ignore doesn'
         r"breaks",
         r"wrong approach",
         r"not the right way",

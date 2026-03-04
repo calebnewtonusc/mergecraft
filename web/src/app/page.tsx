@@ -135,7 +135,6 @@ export default function Home() {
                 desc: "Direct Preference Optimization on (merged PR, rejected PR) pairs for the same underlying change. MergeCraft learns to prefer appropriately-scoped PRs over large ones, conventional commits over freeform messages, and issue-linked contributions over standalone ones.",
               },
             ].map(({ step, title, desc }) => {
-              // eslint-disable-next-line react-hooks/rules-of-hooks
               return (
                 <div key={step} className="reveal-scale rounded-2xl border border-gray-100 bg-white p-8">
                   <div className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: ACCENT }}>{step}</div>
@@ -190,7 +189,6 @@ export default function Home() {
               desc: "Generates PR descriptions that pass review on first submission. Includes the right level of context, links to relevant issues, explains the why not just the what, and uses language patterns that match how merged PRs in that repo are described.",
             },
           ].map(({ icon, title, desc }) => {
-            // eslint-disable-next-line react-hooks/rules-of-hooks
             return (
               <div
                 key={title}
@@ -235,7 +233,6 @@ export default function Home() {
                 sub: "PR merge rate on synthetic contributions evaluated by maintainer-trained simulator",
               },
             ].map(({ stat, label, sub }) => {
-              // eslint-disable-next-line react-hooks/rules-of-hooks
               return (
                 <div
                   key={label}

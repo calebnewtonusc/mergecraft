@@ -1,0 +1,4 @@
+[codespell]
+skip = *.pyc,*.json,*.lock,__pycache__,.git,*.yaml,*.yml,node_modules
+# "doesn'" is an intentional partial regex pattern in merged_pr_corpus.py
+ignore-words = .codespell-ignore-words
