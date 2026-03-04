@@ -1,0 +1,21 @@
+# MergeCraft DPO Configuration
+model:
+  base: checkpoints/grpo
+  torch_dtype: bfloat16
+
+dpo:
+  beta: 0.1
+
+training:
+  output_dir: checkpoints/final
+  num_train_epochs: 1
+  per_device_train_batch_size: 1
+  gradient_accumulation_steps: 8
+  learning_rate: 5.0e-7
+  bf16: true
+  gradient_checkpointing: true
+  logging_steps: 10
+  report_to: wandb
+  run_name: mergecraft-dpo
+
+deepspeed: training/configs/deepspeed_zero3.json

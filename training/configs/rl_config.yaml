@@ -1,0 +1,27 @@
+# MergeCraft GRPO (RL) Configuration
+model:
+  base: checkpoints/sft
+  torch_dtype: bfloat16
+
+grpo:
+  group_size: 8
+  temperature: 0.9
+  max_new_tokens: 4096
+  kl_coeff: 0.01
+
+reward:
+  # Reward: maintainer_merged (from historical data) + CI_passes (binary) + PR_size_within_conventions (binary)
+  merge_probability_weight: 0.7
+  ci_pass_weight: 0.2
+  scope_compliance_weight: 0.1
+
+training:
+  output_dir: checkpoints/grpo
+  group_size: 8
+  learning_rate: 5.0e-6
+  bf16: true
+  gradient_checkpointing: true
+  report_to: wandb
+  run_name: mergecraft-grpo
+
+deepspeed: training/configs/deepspeed_zero3.json
