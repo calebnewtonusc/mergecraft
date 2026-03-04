@@ -81,10 +81,13 @@ class ProjectConventions:
             "repo": self.repo,
             "commit_style": self.commit_style,
             "commit_requires_issue_ref": self.commit_requires_issue_ref,
-            "commit_requires_dco": self.commit_requires_dco,
+            # Use keys that MaintainerSimulator._rule_based_score() expects:
+            # "max_pr_size" (not "max_pr_size_soft") and "dco_required"
+            # (not "commit_requires_dco").
+            "dco_required": self.commit_requires_dco,
             "test_required": self.test_required,
             "issue_first": self.issue_first,
-            "max_pr_size_soft": self.max_pr_size_soft,
+            "max_pr_size": self.max_pr_size_soft,
             "formatters": self.formatters,
             "linters": self.linters,
             "unwritten_rules": self.unwritten_rules,

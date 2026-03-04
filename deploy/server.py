@@ -70,15 +70,31 @@ async def contribute(request: ContributeRequest):
         )
 
         sim = MaintainerSimulator()
-        # MC-28: TODO: derive real metadata from the generated code diff instead of
-        # hardcoding {"lines_added": 150, "has_tests": True, "links_issue": True}.
-        # Use _estimate_metadata(scoped.get("code_changes", "")) from evaluation/craftbench.py.
+        code_diff = scoped.get("code_changes", "")
+        # Compute real metadata from the actual diff content instead of hardcoding.
+        diff_lines = code_diff.splitlines()
+        real_metadata = {
+            "lines_added": sum(
+                1 for l in diff_lines if l.startswith("+") and not l.startswith("+++")
+            ),
+            "lines_deleted": sum(
+                1 for l in diff_lines if l.startswith("-") and not l.startswith("---")
+            ),
+            "files_changed": max(1, code_diff.count("diff --git")),
+            "has_tests": any(
+                kw in code_diff.lower()
+                for kw in ["def test_", "class test", "pytest", "unittest", "assert ", "test_"]
+            ),
+            "links_issue": any(
+                kw in code_diff.lower() for kw in ["closes #", "fixes #", "resolves #"]
+            ),
+        }
         score = sim.score(
             repo=conventions.repo,
             pr_title=description["title"],
             pr_description=description["body"],
-            code_diff=scoped.get("code_changes", ""),
-            metadata={"lines_added": 150, "has_tests": True, "links_issue": True},
+            code_diff=code_diff,
+            metadata=real_metadata,
             conventions=conventions.to_dict(),
         )
 

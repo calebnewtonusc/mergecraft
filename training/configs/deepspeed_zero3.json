@@ -5,7 +5,7 @@
     "offload_param": {"device": "cpu", "pin_memory": true},
     "overlap_comm": true,
     "contiguous_gradients": true,
-    "gather_16bit_weights_on_model_save": true
+    "stage3_gather_16bit_weights_on_model_save": true
   },
   "bf16": {"enabled": true},
   "gradient_clipping": 1.0,

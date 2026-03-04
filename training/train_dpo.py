@@ -20,6 +20,7 @@ from pathlib import Path
 import torch
 from datasets import Dataset
 from loguru import logger
+from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import DPOConfig, DPOTrainer
 
@@ -86,12 +87,18 @@ def load_preference_data(config: DPOConfig_) -> Dataset:
 
 def train(config: DPOConfig_) -> None:
     tokenizer = AutoTokenizer.from_pretrained(config.base_model)
-    model = AutoModelForCausalLM.from_pretrained(
+    # Load the base model then wrap with the PEFT adapter.  Loading a PEFT adapter
+    # directory via AutoModelForCausalLM silently ignores the LoRA weights.
+    _base = AutoModelForCausalLM.from_pretrained(
         config.base_model, torch_dtype=torch.bfloat16, device_map=None,
     )
-    ref_model = AutoModelForCausalLM.from_pretrained(
+    model = PeftModel.from_pretrained(_base, config.base_model)
+    # ref_model must be a separate frozen copy — load the base independently so
+    # the two models share no state.
+    _ref_base = AutoModelForCausalLM.from_pretrained(
         config.base_model, torch_dtype=torch.bfloat16, device_map=None,
     )
+    ref_model = PeftModel.from_pretrained(_ref_base, config.base_model)
     # MC-6: ref_model must be in eval mode — it is frozen and only used for KL divergence
     ref_model.eval()
 
@@ -108,8 +115,10 @@ def train(config: DPOConfig_) -> None:
         model=model, ref_model=ref_model, processing_class=tokenizer,
         args=dpo_args, train_dataset=dataset,
     )
-    trainer.train()
-    trainer.save_model(config.output_dir)
+    try:
+        trainer.train()
+    finally:
+        trainer.save_model(config.output_dir)
     logger.success(f"DPO complete → {config.output_dir}")
 
 

@@ -268,7 +268,9 @@ def collect_repo_prs(
             if not is_merged and rejected_count >= target_rejected:
                 continue
 
-            pr_number = pr["number"]
+            pr_number = pr.get("number", 0)
+            if not pr_number:
+                continue
             pr_title = pr.get("title", "")
             pr_body = pr.get("body", "") or ""
 

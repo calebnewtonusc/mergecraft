@@ -243,13 +243,23 @@ class CraftBench:
             # Description quality
             desc_quality = min(1.0, len(description["body"]) / 500)  # Heuristic
 
+            # Compute actual scope correctness: generated diff should be within
+            # 2x the ground-truth expected lines.  If no expected_lines is given,
+            # fall back to the per-scenario max_pr_size convention.
+            expected_lines = scenario.ground_truth.get("expected_lines")
+            if expected_lines is not None:
+                scope_correct = estimated_metadata["lines_added"] <= expected_lines * 2
+            else:
+                max_pr = scenario.conventions.get("max_pr_size", 500)
+                scope_correct = estimated_metadata["lines_added"] <= max_pr * 2
+
             elapsed = time.time() - start
             return CraftBenchResult(
                 scenario_id=scenario.scenario_id,
                 repo=scenario.repo,
                 category=scenario.category,
                 simulated_merge_rate=sim_result.merge_probability,
-                scope_correct=True,  # TODO: compare to ground truth
+                scope_correct=scope_correct,
                 convention_compliant=convention_compliant,
                 description_quality=desc_quality,
                 overall_score=(

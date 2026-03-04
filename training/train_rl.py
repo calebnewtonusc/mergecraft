@@ -21,6 +21,7 @@ from pathlib import Path
 import torch
 from datasets import Dataset
 from loguru import logger
+from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 # MC-15: renamed GRPOConfig_ to GRPOTrainingConfig below to avoid shadowing the trl import
 from trl import GRPOConfig, GRPOTrainer
@@ -44,22 +45,25 @@ class GRPOTrainingConfig:
 def build_reward_fn(simulator: MaintainerSimulator):
     """Build the GRPO reward function using the maintainer simulator."""
 
-    def reward_fn(prompts: list[str], completions: list[str], **kwargs) -> list[float]:
+    def reward_fn(prompts: list[str], completions: list[list[str]], **kwargs) -> list[float]:
+        # GRPOTrainer passes completions as a nested list: one list of completion
+        # strings per prompt (num_generations completions each). We flatten them
+        # into a single list of rewards, one per completion, so the returned list
+        # has length num_prompts * num_generations.
         rewards = []
-        for prompt, completion in zip(prompts, completions):
-            # Extract task and repo from prompt
+        for prompt, completion_group in zip(prompts, completions):
             repo = _extract_repo(prompt)
             conventions = _extract_conventions(prompt)
-
-            score = simulator.score(
-                repo=repo,
-                pr_title="",
-                pr_description=_extract_pr_description(completion),
-                code_diff=_extract_code_changes(completion),
-                metadata=_estimate_metadata(completion),
-                conventions=conventions,
-            )
-            rewards.append(score.merge_probability)
+            for completion in completion_group:
+                score = simulator.score(
+                    repo=repo,
+                    pr_title="",
+                    pr_description=_extract_pr_description(completion),
+                    code_diff=_extract_code_changes(completion),
+                    metadata=_estimate_metadata(completion),
+                    conventions=conventions,
+                )
+                rewards.append(score.merge_probability)
 
         return rewards
 
@@ -138,6 +142,11 @@ def load_rl_dataset(config: GRPOTrainingConfig) -> Dataset:
                         })
                     except json.JSONDecodeError:
                         pass
+    if not examples:
+        raise RuntimeError(
+            f"No RL training examples found in {config.data_dir!r}. "
+            "Run the discovery and synthesis pipeline first."
+        )
     # MC-5: shuffle so each training step sees a representative mix of repos
     random.seed(42)
     random.shuffle(examples)
@@ -147,11 +156,15 @@ def load_rl_dataset(config: GRPOTrainingConfig) -> Dataset:
 
 
 def train(config: GRPOTrainingConfig) -> None:
-    logger.info(f"Loading SFT: {config.base_model}")
+    logger.info(f"Loading SFT checkpoint (PEFT adapter): {config.base_model}")
     tokenizer = AutoTokenizer.from_pretrained(config.base_model)
-    model = AutoModelForCausalLM.from_pretrained(
+    # Load the base model from the adapter config, then apply the PEFT adapter on
+    # top.  Using AutoModelForCausalLM.from_pretrained on a PEFT adapter directory
+    # silently ignores the LoRA weights — PeftModel.from_pretrained is required.
+    base_model = AutoModelForCausalLM.from_pretrained(
         config.base_model, torch_dtype=torch.bfloat16, device_map=None,
     )
+    model = PeftModel.from_pretrained(base_model, config.base_model)
 
     simulator = MaintainerSimulator()
     reward_fn = build_reward_fn(simulator)
@@ -170,8 +183,10 @@ def train(config: GRPOTrainingConfig) -> None:
         model=model, processing_class=tokenizer,
         reward_funcs=[reward_fn], args=grpo_args, train_dataset=dataset,
     )
-    trainer.train()
-    trainer.save_model(config.output_dir)
+    try:
+        trainer.train()
+    finally:
+        trainer.save_model(config.output_dir)
     logger.success(f"GRPO complete → {config.output_dir}")
 
 

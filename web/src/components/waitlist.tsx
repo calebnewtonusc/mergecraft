@@ -11,6 +11,16 @@ export default function Waitlist() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (email.trim()) {
+      // POST to /api/waitlist — backend endpoint must accept { email } and persist it.
+      fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      }).catch((err) => {
+        // Fire-and-forget: show success UI regardless so the user is not blocked
+        // by a missing or erroring backend during early development.
+        console.error("Waitlist submission failed:", err);
+      });
       setSubmitted(true);
     }
   }

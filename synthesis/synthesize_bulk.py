@@ -271,7 +271,9 @@ class ContributionSynthesizer:
 
                 with out_file.open("a") as fh:
                     for result in results:
-                        if isinstance(result, dict):
+                        if isinstance(result, BaseException):
+                            logger.warning(f"Synthesis task raised an exception: {result}")
+                        elif isinstance(result, dict):
                             fh.write(json.dumps(result) + "\n")
                             completed += 1
 

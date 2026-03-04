@@ -82,6 +82,11 @@ def load_training_data(config: SFTConfig_) -> tuple[Dataset, Dataset]:
                     except json.JSONDecodeError:
                         pass
 
+    if not examples:
+        raise RuntimeError(
+            f"No merged contribution examples found in {config.data_dir!r}. "
+            "Run the discovery and synthesis pipeline first."
+        )
     logger.info(f"Loaded {len(examples):,} merged contribution examples")
     # MC-2: Shuffle before splitting so train/val sets are representative, not chronological
     random.seed(42)
